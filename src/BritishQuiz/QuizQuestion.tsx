@@ -1,7 +1,7 @@
 import { AbsoluteFill, Img, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
 import { OPTION_LABELS, QuizQuestion as QuizQuestionType } from "./data";
 
-export const QUESTION_FRAMES = 420; // 14s per question
+export const QUESTION_FRAMES = 480; // 16s per question (incl. 2s buffer after voiceover)
 
 // Timing
 const IMG_FULLSCREEN_END = 75;  // car stays fullscreen until frame 75 (2.5s)
