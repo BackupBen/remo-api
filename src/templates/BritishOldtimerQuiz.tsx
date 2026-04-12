@@ -98,9 +98,11 @@ const QuizQuestionScene: React.FC<{
   return (
     <AbsoluteFill style={{ opacity: sceneOpacity, overflow: "hidden" }}>
 
-      {/* Voiceover — spielt ab Start der Sequenz */}
+      {/* Voiceover — startet beim Reveal (Antwort wird aufgedeckt) */}
       {question.voiceoverUrl && (
-        <Audio src={question.voiceoverUrl} />
+        <Sequence from={REVEAL_START}>
+          <Audio src={question.voiceoverUrl} />
+        </Sequence>
       )}
 
       {/* Hintergrund — faded ein nach fullscreen-Phase */}
