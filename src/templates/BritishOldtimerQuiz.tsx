@@ -33,7 +33,7 @@ export interface BritishQuizProps {
 const OPTION_LABELS = ["A", "B", "C", "D"] as const;
 const BADGE_COLOR = "#1565C0";
 
-export const QUESTION_FRAMES = 750; // 25s pro Frage — genug für vollständiges Voiceover inkl. funFact
+export const QUESTION_FRAMES = 1500; // 50s pro Frage — ausreichend Puffer für langes Voiceover inkl. funFact
 const INTRO_FRAMES = 90;            // 3s Intro
 const TRANSITION_FRAMES = 30;       // 1s Übergang zwischen Fragen
 
