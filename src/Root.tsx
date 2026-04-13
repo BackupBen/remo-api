@@ -3,7 +3,15 @@ import { Composition } from "remotion";
 import { SocialClip } from "./templates/SocialClip";
 import { ImageSlideshow } from "./templates/ImageSlideshow";
 import { TextAnimation } from "./templates/TextAnimation";
-import { BritishOldtimerQuiz, QUESTION_FRAMES } from "./templates/BritishOldtimerQuiz";
+import { getAudioDurationInSeconds } from "remotion";
+import {
+  BritishOldtimerQuiz,
+  QUESTION_FRAMES,
+  INTRO_FRAMES,
+  TRANSITION_FRAMES,
+  REVEAL_START,
+} from "./templates/BritishOldtimerQuiz";
+import type { QuizQuestion } from "./templates/BritishOldtimerQuiz";
 
 export const Root: React.FC = () => {
   return (
@@ -54,12 +62,35 @@ export const Root: React.FC = () => {
         height={1080}
         fps={30}
         durationInFrames={90}
-        calculateMetadata={({ props }) => {
-          const questions = (props.questions as unknown[]) || [];
-          const count = Math.max(1, questions.length);
-          // 90 Intro + N×420 Fragen + (N-1)×30 Übergänge
-          const total = 90 + count * QUESTION_FRAMES + (count - 1) * 30;
-          return { durationInFrames: total };
+        calculateMetadata={async ({ props, fps }) => {
+          const questions = (props.questions as QuizQuestion[]) || [];
+          const PADDING = 90; // 3s Puffer nach dem letzten Wort
+
+          // Pro Frage: Voiceover-Länge messen und Frames berechnen
+          const questionDurations = await Promise.all(
+            questions.map(async (q) => {
+              if (q.voiceoverUrl) {
+                try {
+                  const secs = await getAudioDurationInSeconds(q.voiceoverUrl);
+                  // Voiceover startet bei REVEAL_START → Länge = REVEAL_START + audioDauer + Puffer
+                  return Math.ceil(REVEAL_START + secs * fps + PADDING);
+                } catch {
+                  return QUESTION_FRAMES; // Fallback
+                }
+              }
+              return QUESTION_FRAMES;
+            })
+          );
+
+          const total =
+            INTRO_FRAMES +
+            questionDurations.reduce((s, d) => s + d, 0) +
+            Math.max(0, questions.length - 1) * TRANSITION_FRAMES;
+
+          return {
+            durationInFrames: Math.max(total, 90),
+            props: { ...props, questionDurations },
+          };
         }}
         defaultProps={{
           questions: [
@@ -72,6 +103,7 @@ export const Root: React.FC = () => {
               funFact: "Enzo Ferrari nannte ihn das schönste Auto der Welt.",
             },
           ],
+          questionDurations: undefined,
         }}
       />
 

@@ -26,6 +26,8 @@ export interface QuizQuestion {
 
 export interface BritishQuizProps {
   questions: QuizQuestion[];
+  /** Pro Frage berechnete Länge in Frames (von calculateMetadata gesetzt) */
+  questionDurations?: number[];
 }
 
 // ─── Konstanten ───────────────────────────────────────────────────────────────
@@ -33,9 +35,10 @@ export interface BritishQuizProps {
 const OPTION_LABELS = ["A", "B", "C", "D"] as const;
 const BADGE_COLOR = "#1565C0";
 
-export const QUESTION_FRAMES = 990; // 33s pro Frage
-const INTRO_FRAMES = 90;            // 3s Intro
-const TRANSITION_FRAMES = 30;       // 1s Übergang zwischen Fragen
+export const QUESTION_FRAMES = 990;   // Fallback wenn kein Voiceover vorhanden
+export const INTRO_FRAMES = 90;       // 3s Intro
+export const TRANSITION_FRAMES = 30;  // 1s Übergang zwischen Fragen
+export const REVEAL_START = 310;      // Frame ab dem Antwort aufgedeckt wird (für calculateMetadata)
 
 // Timing innerhalb einer Frage (Frames)
 const IMG_FULLSCREEN_END = 75;  // Auto bleibt fullscreen bis Frame 75
@@ -43,7 +46,6 @@ const SHRINK_END = 105;         // Shrink-Animation fertig bei Frame 105
 const ANSWERS_START = 110;
 const ANSWER_STAGGER = 18;
 const THINK_START = ANSWERS_START + 4 * ANSWER_STAGGER + 20;
-const REVEAL_START = 310;
 const FACT_START = 350;
 
 // ─── Quiz-Frage ───────────────────────────────────────────────────────────────
@@ -52,14 +54,15 @@ const QuizQuestionScene: React.FC<{
   question: QuizQuestion;
   questionNumber: number;
   totalQuestions: number;
-}> = ({ question, questionNumber, totalQuestions }) => {
+  durationInFrames: number;
+}> = ({ question, questionNumber, totalQuestions, durationInFrames }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
   const isRevealed = frame >= REVEAL_START;
 
-  // Szene ausblenden
-  const sceneOpacity = interpolate(frame, [QUESTION_FRAMES - 20, QUESTION_FRAMES], [1, 0], {
+  // Szene ausblenden — richtet sich nach tatsächlicher Länge
+  const sceneOpacity = interpolate(frame, [durationInFrames - 20, durationInFrames], [1, 0], {
     extrapolateLeft: "clamp", extrapolateRight: "clamp",
   });
 
@@ -350,7 +353,14 @@ const QuizIntro: React.FC<{ totalQuestions: number }> = ({ totalQuestions }) => 
 
 // ─── Hauptkomposition ─────────────────────────────────────────────────────────
 
-export const BritishOldtimerQuiz: React.FC<BritishQuizProps> = ({ questions }) => {
+export const BritishOldtimerQuiz: React.FC<BritishQuizProps> = ({ questions, questionDurations }) => {
+  // Berechne kumulative Start-Frames pro Frage
+  const durations = questions.map((_, i) => questionDurations?.[i] ?? QUESTION_FRAMES);
+  const startFrames = durations.reduce<number[]>((acc, dur, i) => {
+    acc.push(i === 0 ? INTRO_FRAMES : acc[i - 1] + durations[i - 1] + TRANSITION_FRAMES);
+    return acc;
+  }, []);
+
   return (
     <AbsoluteFill style={{ background: "linear-gradient(160deg, #0a1a6e 0%, #1a237e 40%, #0d47a1 100%)" }}>
       {/* Intro */}
@@ -360,13 +370,14 @@ export const BritishOldtimerQuiz: React.FC<BritishQuizProps> = ({ questions }) =
 
       {/* Fragen */}
       {questions.map((question, index) => {
-        const from = INTRO_FRAMES + index * (QUESTION_FRAMES + TRANSITION_FRAMES);
+        const dur = durations[index];
         return (
-          <Sequence key={index} from={from} durationInFrames={QUESTION_FRAMES}>
+          <Sequence key={index} from={startFrames[index]} durationInFrames={dur}>
             <QuizQuestionScene
               question={question}
               questionNumber={index + 1}
               totalQuestions={questions.length}
+              durationInFrames={dur}
             />
           </Sequence>
         );
