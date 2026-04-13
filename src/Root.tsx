@@ -74,8 +74,9 @@ export const Root: React.FC = () => {
                   const secs = await getAudioDurationInSeconds(q.voiceoverUrl);
                   // Voiceover startet bei REVEAL_START → Länge = REVEAL_START + audioDauer + Puffer
                   return Math.ceil(REVEAL_START + secs * fps + PADDING);
-                } catch {
-                  return QUESTION_FRAMES; // Fallback
+                } catch (e) {
+                  console.error('[BritishQuiz] getAudioDurationInSeconds failed for', q.voiceoverUrl, e);
+                  return 1800; // 60s fallback — safe for any voiceover length
                 }
               }
               return QUESTION_FRAMES;
