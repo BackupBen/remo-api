@@ -65,7 +65,7 @@ export const Root: React.FC = () => {
         calculateMetadata={async ({ props }) => {
           const questions = (props.questions as QuizQuestion[]) || [];
           const fps = 30; // muss hardcoded sein — calculateMetadata erhält keinen fps-Parameter
-          const PADDING = 180; // 6s Puffer nach dem letzten Wort
+          const PADDING = 90; // 3s Puffer nach dem letzten Wort
 
           // Pro Frage: Voiceover-Länge messen und Frames berechnen
           const questionDurations = await Promise.all(
