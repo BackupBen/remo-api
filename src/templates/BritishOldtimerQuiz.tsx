@@ -30,6 +30,8 @@ export interface BritishQuizProps {
   questions: QuizQuestion[];
   /** Pro Frage berechnete Länge in Frames (von calculateMetadata gesetzt) */
   questionDurations?: number[];
+  /** Optional: URL zur Hintergrundmusik (MinIO) — wird als Loop abgespielt */
+  backgroundMusicUrl?: string;
 }
 
 // ─── Konstanten ───────────────────────────────────────────────────────────────
@@ -355,7 +357,9 @@ const QuizIntro: React.FC<{ totalQuestions: number }> = ({ totalQuestions }) => 
 
 // ─── Hauptkomposition ─────────────────────────────────────────────────────────
 
-export const BritishOldtimerQuiz: React.FC<BritishQuizProps> = ({ questions, questionDurations }) => {
+export const BritishOldtimerQuiz: React.FC<BritishQuizProps> = ({ questions, questionDurations, backgroundMusicUrl }) => {
+  const { durationInFrames } = useVideoConfig();
+
   // Berechne kumulative Start-Frames pro Frage
   const durations = questions.map((_, i) => questionDurations?.[i] ?? QUESTION_FRAMES);
   const startFrames = durations.reduce<number[]>((acc, dur, i) => {
@@ -365,6 +369,19 @@ export const BritishOldtimerQuiz: React.FC<BritishQuizProps> = ({ questions, que
 
   return (
     <AbsoluteFill style={{ background: "linear-gradient(160deg, #0a1a6e 0%, #1a237e 40%, #0d47a1 100%)" }}>
+      {/* Hintergrundmusik (Loop, Fade-in 2s / Fade-out 2s, Volumen 12%) */}
+      {backgroundMusicUrl && (
+        <Audio
+          src={backgroundMusicUrl}
+          loop
+          volume={(frame) => {
+            const fadeIn  = interpolate(frame, [0, 60], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+            const fadeOut = interpolate(frame, [durationInFrames - 60, durationInFrames], [1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
+            return 0.12 * Math.min(fadeIn, fadeOut);
+          }}
+        />
+      )}
+
       {/* Intro */}
       <Sequence from={0} durationInFrames={INTRO_FRAMES}>
         <QuizIntro totalQuestions={questions.length} />
