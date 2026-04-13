@@ -22,6 +22,8 @@ export interface QuizQuestion {
   funFact: string;
   /** Optional: URL zur Voiceover-MP3 */
   voiceoverUrl?: string;
+  /** Optional: Dauer des Voiceovers in Sekunden (von n8n berechnet) */
+  voiceoverDurationSeconds?: number;
 }
 
 export interface BritishQuizProps {

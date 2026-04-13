@@ -69,10 +69,14 @@ export const Root: React.FC = () => {
           // Pro Frage: Voiceover-Länge messen und Frames berechnen
           const questionDurations = await Promise.all(
             questions.map(async (q) => {
+              // 1. Prefer pre-calculated duration from n8n (no fetch needed)
+              if (q.voiceoverDurationSeconds) {
+                return Math.ceil(REVEAL_START + q.voiceoverDurationSeconds * fps + PADDING);
+              }
+              // 2. Fallback: try fetching audio duration at render time
               if (q.voiceoverUrl) {
                 try {
                   const secs = await getAudioDurationInSeconds(q.voiceoverUrl);
-                  // Voiceover startet bei REVEAL_START → Länge = REVEAL_START + audioDauer + Puffer
                   return Math.ceil(REVEAL_START + secs * fps + PADDING);
                 } catch (e) {
                   console.error('[BritishQuiz] getAudioDurationInSeconds failed for', q.voiceoverUrl, e);
