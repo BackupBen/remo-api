@@ -412,10 +412,7 @@ const QuizIntro: React.FC<{ totalQuestions: number }> = ({ totalQuestions }) => 
 
       <div style={{ textAlign: "center", opacity: titleOpacity, transform: `scale(${titleScale})`, zIndex: 1 }}>
         <div style={{ fontSize: 30, letterSpacing: 10, color: "rgba(255,255,255,0.7)", fontFamily: "'Arial', sans-serif", fontWeight: 700, textTransform: "uppercase", marginBottom: 24 }}>
-          🇬🇧 &nbsp; Welcome to the
-        </div>
-        <div style={{ fontSize: 120, fontWeight: 900, color: "#ffffff", fontFamily: "'Arial Black', 'Arial', sans-serif", lineHeight: 1, textShadow: "0 4px 40px rgba(0,0,0,0.4)" }}>
-          BRITISH
+          🚗 &nbsp; Welcome to the
         </div>
         <div style={{ fontSize: 120, fontWeight: 900, color: "#FDD835", fontFamily: "'Arial Black', 'Arial', sans-serif", lineHeight: 1, textShadow: "0 4px 40px rgba(0,0,0,0.4)" }}>
           OLDTIMER
