@@ -26,12 +26,16 @@ export interface QuizQuestion {
   voiceoverDurationSeconds?: number;
 }
 
+export type Difficulty = "easy" | "medium" | "hard";
+
 export interface BritishQuizProps {
   questions: QuizQuestion[];
   /** Pro Frage berechnete Länge in Frames (von calculateMetadata gesetzt) */
   questionDurations?: number[];
   /** Optional: URL zur Hintergrundmusik (MinIO) — wird als Loop abgespielt */
   backgroundMusicUrl?: string;
+  /** Schwierigkeitsgrad: easy = volles Bild, medium = halbes Bild, hard = kleiner Ausschnitt */
+  difficulty?: Difficulty;
 }
 
 // ─── Konstanten ───────────────────────────────────────────────────────────────
@@ -54,12 +58,26 @@ const FACT_START = 350;
 
 // ─── Quiz-Frage ───────────────────────────────────────────────────────────────
 
+// Clip-Inset-Werte pro Schwierigkeitsgrad (top, right, bottom, left — in %)
+const DIFFICULTY_CLIP: Record<Difficulty, [number, number, number, number]> = {
+  easy:   [0,  0,  0,  0],   // volles Bild
+  medium: [0,  50, 0,  0],   // linke Hälfte sichtbar
+  hard:   [25, 30, 25, 30],  // kleines Fenster in der Mitte (~40%×50%)
+};
+const DIFFICULTY_BLUR: Record<Difficulty, number> = { easy: 0, medium: 18, hard: 40 };
+const DIFFICULTY_LABEL: Record<Difficulty, { text: string; color: string }> = {
+  easy:   { text: "EASY",   color: "#43A047" },
+  medium: { text: "MEDIUM", color: "#FB8C00" },
+  hard:   { text: "HARD",   color: "#E53935" },
+};
+
 const QuizQuestionScene: React.FC<{
   question: QuizQuestion;
   questionNumber: number;
   totalQuestions: number;
   durationInFrames: number;
-}> = ({ question, questionNumber, totalQuestions, durationInFrames }) => {
+  difficulty: Difficulty;
+}> = ({ question, questionNumber, totalQuestions, durationInFrames, difficulty }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
 
@@ -102,6 +120,24 @@ const QuizQuestionScene: React.FC<{
   // Nummern-Badge pop-in
   const badgeScale = spring({ frame, fps, config: { stiffness: 200, damping: 15 } });
 
+  // ─── Schwierigkeitsgrad-Effekt ─────────────────────────────────────────────
+  // Reveal-Animation: clip öffnet sich von REVEAL_START bis REVEAL_START+25
+  const revealProgress = interpolate(frame, [REVEAL_START, REVEAL_START + 25], [0, 1], {
+    extrapolateLeft: "clamp", extrapolateRight: "clamp",
+  });
+  const [ct, cr, cb, cl] = DIFFICULTY_CLIP[difficulty];
+  const clipTop    = interpolate(revealProgress, [0, 1], [ct, 0]);
+  const clipRight  = interpolate(revealProgress, [0, 1], [cr, 0]);
+  const clipBottom = interpolate(revealProgress, [0, 1], [cb, 0]);
+  const clipLeft   = interpolate(revealProgress, [0, 1], [cl, 0]);
+  const clipPath   = `inset(${clipTop}% ${clipRight}% ${clipBottom}% ${clipLeft}% round 6px)`;
+  const blurNow    = DIFFICULTY_BLUR[difficulty] * (1 - revealProgress);
+  const diffLabel  = DIFFICULTY_LABEL[difficulty];
+  // Badge faded aus kurz vor dem Reveal
+  const diffBadgeOpacity = interpolate(frame, [REVEAL_START - 15, REVEAL_START], [1, 0], {
+    extrapolateLeft: "clamp", extrapolateRight: "clamp",
+  });
+
   return (
     <AbsoluteFill style={{ opacity: sceneOpacity, overflow: "hidden" }}>
 
@@ -128,15 +164,34 @@ const QuizQuestionScene: React.FC<{
         borderRadius: imgRadius,
         padding: imgPad,
         boxShadow: frame >= SHRINK_END ? "0 8px 40px rgba(0,0,0,0.5)" : "none",
+        overflow: "hidden",
       }}>
+        {/* Unscharfer Hintergrund (nur bei medium/hard, vor dem Reveal) */}
+        {difficulty !== "easy" && blurNow > 0 && (
+          <Img
+            src={question.image}
+            style={{
+              position: "absolute",
+              top: -10, left: -10, right: -10, bottom: -10,
+              width: "calc(100% + 20px)",
+              height: imgHeight + 20,
+              objectFit: "cover",
+              filter: `blur(${blurNow}px)`,
+            }}
+          />
+        )}
+        {/* Scharfes Bild — geclippt je nach Schwierigkeitsgrad */}
         <Img
           src={question.image}
           style={{
+            position: "relative",
+            zIndex: 1,
             width: "100%",
             height: imgHeight,
             objectFit: "cover",
             borderRadius: Math.max(0, imgRadius - 4),
             display: "block",
+            clipPath: difficulty !== "easy" ? clipPath : undefined,
           }}
         />
         {/* Vignette (nur fullscreen-Phase) */}
@@ -146,7 +201,28 @@ const QuizQuestionScene: React.FC<{
             inset: 0,
             background: "radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.65) 100%)",
             opacity: vignetteOpacity,
+            zIndex: 2,
           }} />
+        )}
+        {/* Schwierigkeits-Badge */}
+        {difficulty !== "easy" && diffBadgeOpacity > 0 && (
+          <div style={{
+            position: "absolute",
+            top: 12, right: 12,
+            backgroundColor: diffLabel.color,
+            color: "#fff",
+            fontSize: 20,
+            fontWeight: 900,
+            fontFamily: "'Arial Black', sans-serif",
+            letterSpacing: 3,
+            padding: "6px 16px",
+            borderRadius: 8,
+            opacity: diffBadgeOpacity,
+            zIndex: 3,
+            boxShadow: "0 2px 10px rgba(0,0,0,0.4)",
+          }}>
+            {diffLabel.text}
+          </div>
         )}
       </div>
 
@@ -357,7 +433,7 @@ const QuizIntro: React.FC<{ totalQuestions: number }> = ({ totalQuestions }) => 
 
 // ─── Hauptkomposition ─────────────────────────────────────────────────────────
 
-export const BritishOldtimerQuiz: React.FC<BritishQuizProps> = ({ questions, questionDurations, backgroundMusicUrl }) => {
+export const BritishOldtimerQuiz: React.FC<BritishQuizProps> = ({ questions, questionDurations, backgroundMusicUrl, difficulty = "easy" }) => {
   const { durationInFrames } = useVideoConfig();
 
   // Berechne kumulative Start-Frames pro Frage
@@ -397,6 +473,7 @@ export const BritishOldtimerQuiz: React.FC<BritishQuizProps> = ({ questions, que
               questionNumber={index + 1}
               totalQuestions={questions.length}
               durationInFrames={dur}
+              difficulty={difficulty}
             />
           </Sequence>
         );

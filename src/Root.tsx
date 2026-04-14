@@ -110,6 +110,7 @@ export const Root: React.FC = () => {
             },
           ],
           questionDurations: undefined,
+          difficulty: "easy" as "easy" | "medium" | "hard",
         }}
       />
 
