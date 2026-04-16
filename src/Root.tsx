@@ -12,6 +12,11 @@ import {
   REVEAL_START,
 } from "./templates/BritishOldtimerQuiz";
 import type { QuizQuestion } from "./templates/BritishOldtimerQuiz";
+import {
+  OldtimerShowcase,
+  getOldtimerShowcaseDurationInFrames,
+  oldtimerShowcaseDefaultProps,
+} from "./templates/OldtimerShowcase";
 
 export const Root: React.FC = () => {
   return (
@@ -112,6 +117,21 @@ export const Root: React.FC = () => {
           questionDurations: undefined,
           difficulty: "easy" as "easy" | "medium" | "hard",
         }}
+      />
+
+      <Composition
+        id="OldtimerShowcase"
+        component={OldtimerShowcase}
+        width={1920}
+        height={1080}
+        fps={30}
+        durationInFrames={getOldtimerShowcaseDurationInFrames(oldtimerShowcaseDefaultProps)}
+        calculateMetadata={({ props }) => {
+          return {
+            durationInFrames: getOldtimerShowcaseDurationInFrames(props),
+          };
+        }}
+        defaultProps={oldtimerShowcaseDefaultProps}
       />
 
       <Composition
