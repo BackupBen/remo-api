@@ -54,6 +54,9 @@ export interface ShowcaseCar {
   audioUrl?: string;
   image?: string;
   imageUrl?: string;
+  images?: string[];
+  imageUrls?: string[];
+  mediaUrls?: string[];
   media?: ShowcaseMedia[];
 }
 
@@ -172,6 +175,22 @@ const getAudioUrl = (section?: {
 
 const getCarAudioUrl = (car?: ShowcaseCar) => {
   return car?.voiceoverUrl || car?.audioUrl || "";
+};
+
+const getOverlayOpacity = (
+  frame: number,
+  duration: number,
+  visibleFrames: number,
+  fadeFrames: number
+) => {
+  const end = Math.max(1, Math.min(duration, visibleFrames));
+  const fade = Math.max(1, Math.min(fadeFrames, Math.floor(end / 3)));
+  const holdEnd = Math.max(fade, end - fade);
+
+  return interpolate(frame, [0, fade, holdEnd, end], [0, 1, 1, 0], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
 };
 
 export const buildOldtimerShowcaseTimeline = (
@@ -332,9 +351,9 @@ const IntroScene: React.FC<{
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const title = cleanText(props.title, oldtimerShowcaseDefaultProps.title);
-  const subtitle = cleanText(props.subtitle, props.category || "");
-  const hook = cleanText(props.intro?.hook, props.category || "");
+  const category = cleanText(props.category, props.subtitle || "");
   const introAudio = getAudioUrl(props.intro);
+  const overlayOpacity = getOverlayOpacity(frame, duration, fps * 6, 18);
   const scale = spring({
     frame,
     fps,
@@ -351,6 +370,7 @@ const IntroScene: React.FC<{
       {introAudio ? <Audio src={introAudio} /> : null}
       <AbsoluteFill
         style={{
+          opacity: overlayOpacity,
           justifyContent: "center",
           padding: "0 130px",
           fontFamily: "Inter, Arial, sans-serif",
@@ -362,7 +382,7 @@ const IntroScene: React.FC<{
             fontSize: 28,
             fontWeight: 800,
             textTransform: "uppercase",
-            marginBottom: 28,
+            marginBottom: 24,
             letterSpacing: 0,
           }}
         >
@@ -372,15 +392,15 @@ const IntroScene: React.FC<{
           style={{
             color: PAPER,
             fontFamily: "Georgia, Times New Roman, serif",
-            fontSize: 92,
+            fontSize: 86,
             lineHeight: 1.02,
-            maxWidth: 1260,
+            maxWidth: 1180,
             transform: `scale(${0.96 + scale * 0.04})`,
             transformOrigin: "left center",
             textShadow: "0 6px 34px rgba(0,0,0,0.45)",
           }}
         >
-          {truncate(title || "", 86)}
+          {truncate(title || "", 64)}
         </div>
         <div
           style={{
@@ -400,33 +420,106 @@ const IntroScene: React.FC<{
             fontWeight: 600,
           }}
         >
-          {truncate(subtitle || hook, 150)}
-        </div>
-        <div
-          style={{
-            color: "rgba(242,234,216,0.68)",
-            fontSize: 23,
-            lineHeight: 1.45,
-            marginTop: 26,
-            maxWidth: 980,
-          }}
-        >
-          {truncate(hook, 170)}
+          {truncate(category, 78)}
         </div>
       </AbsoluteFill>
     </FadeWrap>
   );
 };
 
-const pickCarMedia = (car: ShowcaseCar) => {
-  const media = (car.media || []).find((item) => getMediaUrl(item));
-  if (media) {
-    return media;
-  }
-  if (car.image || car.imageUrl) {
-    return { mediaType: "image", mediaUrl: car.image || car.imageUrl } satisfies ShowcaseMedia;
-  }
-  return null;
+const getCarMediaItems = (car: ShowcaseCar) => {
+  const seen = new Set<string>();
+  const mediaItems: ShowcaseMedia[] = [];
+
+  const addMedia = (item: ShowcaseMedia | string | null | undefined) => {
+    if (!item) {
+      return;
+    }
+    const media =
+      typeof item === "string"
+        ? ({ mediaType: "image", mediaUrl: item } satisfies ShowcaseMedia)
+        : item;
+    const url = getMediaUrl(media);
+    if (!url || seen.has(url)) {
+      return;
+    }
+    seen.add(url);
+    mediaItems.push({
+      mediaType: media.mediaType || "image",
+      ...media,
+      mediaUrl: url,
+    });
+  };
+
+  (car.media || []).forEach(addMedia);
+  (car.images || []).forEach(addMedia);
+  (car.imageUrls || []).forEach(addMedia);
+  (car.mediaUrls || []).forEach(addMedia);
+  addMedia(car.image || car.imageUrl || null);
+
+  return mediaItems.slice(0, 8);
+};
+
+const CarMediaItem: React.FC<{
+  media: ShowcaseMedia;
+  frame: number;
+  start: number;
+  end: number;
+  index: number;
+  transitionFrames: number;
+}> = ({ media, frame, start, end, index, transitionFrames }) => {
+  const mediaUrl = getMediaUrl(media);
+  const span = Math.max(1, end - start);
+  const fadeFrames = Math.max(1, Math.min(transitionFrames, Math.floor(span / 3)));
+  const opacity =
+    span < 4
+      ? frame >= start && frame <= end
+        ? 1
+        : 0
+      : interpolate(
+          frame,
+          [start, start + fadeFrames, end - fadeFrames, end],
+          [0, 1, 1, 0],
+          { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
+        );
+  const localFrame = clamp(frame - start, 0, Math.max(1, end - start));
+  const scale = interpolate(localFrame, [0, Math.max(1, end - start)], [1.03, 1.12], {
+    extrapolateRight: "clamp",
+  });
+  const drift = interpolate(localFrame, [0, Math.max(1, end - start)], [-24, 24], {
+    extrapolateRight: "clamp",
+  });
+  const x = index % 3 === 1 ? -drift : index % 3 === 2 ? drift * 0.55 : 0;
+  const y = index % 3 === 0 ? drift * 0.45 : 0;
+
+  return (
+    <AbsoluteFill style={{ opacity }}>
+      {media.mediaType === "video" ? (
+        <OffthreadVideo
+          src={mediaUrl}
+          volume={0}
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            filter: "contrast(1.06) saturate(0.94)",
+            transform: `scale(${scale}) translate(${x}px, ${y}px)`,
+          }}
+        />
+      ) : (
+        <Img
+          src={mediaUrl}
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            filter: "contrast(1.06) saturate(0.94)",
+            transform: `scale(${scale}) translate(${x}px, ${y}px)`,
+          }}
+        />
+      )}
+    </AbsoluteFill>
+  );
 };
 
 const CarMediaLayer: React.FC<{
@@ -434,19 +527,16 @@ const CarMediaLayer: React.FC<{
   duration: number;
 }> = ({ car, duration }) => {
   const frame = useCurrentFrame();
-  const media = pickCarMedia(car);
-  const mediaUrl = getMediaUrl(media);
-  const zoom = interpolate(frame, [0, duration], [1, 1.08], {
-    extrapolateRight: "clamp",
-  });
+  const mediaItems = getCarMediaItems(car);
 
-  if (!mediaUrl) {
+  if (mediaItems.length === 0) {
     return (
       <AbsoluteFill
         style={{
-          alignItems: "flex-end",
+          alignItems: "center",
           justifyContent: "center",
-          paddingRight: 120,
+          background:
+            "radial-gradient(circle at 68% 42%, rgba(209,163,59,0.22), transparent 0 22%, rgba(17,16,14,0.94) 48%)",
         }}
       >
         <div
@@ -469,86 +559,38 @@ const CarMediaLayer: React.FC<{
     );
   }
 
+  const segmentFrames = Math.max(1, Math.ceil(duration / mediaItems.length));
+  const transitionFrames = Math.min(
+    30,
+    Math.max(1, Math.floor(segmentFrames * 0.22))
+  );
+
   return (
     <AbsoluteFill>
-      {media?.mediaType === "video" ? (
-        <OffthreadVideo
-          src={mediaUrl}
-          volume={0}
-          style={{
-            width: "100%",
-            height: "100%",
-            objectFit: "cover",
-            filter: "contrast(1.05) saturate(0.9)",
-          }}
-        />
-      ) : (
-        <Img
-          src={mediaUrl}
-          style={{
-            width: "100%",
-            height: "100%",
-            objectFit: "cover",
-            transform: `scale(${zoom})`,
-            filter: "contrast(1.04) saturate(0.9)",
-          }}
-        />
-      )}
+      {mediaItems.map((media, index) => {
+        const start = Math.max(0, index * segmentFrames - (index === 0 ? 0 : transitionFrames));
+        const rawEnd = index === mediaItems.length - 1 ? duration : (index + 1) * segmentFrames + transitionFrames;
+        const end = Math.min(duration, Math.max(start + 1, rawEnd));
+
+        return (
+          <CarMediaItem
+            key={`${getMediaUrl(media)}-${index}`}
+            media={media}
+            frame={frame}
+            start={start}
+            end={end}
+            index={index}
+            transitionFrames={transitionFrames}
+          />
+        );
+      })}
       <AbsoluteFill
         style={{
           background:
-            "linear-gradient(90deg, rgba(17,16,14,0.9) 0%, rgba(17,16,14,0.7) 42%, rgba(17,16,14,0.28) 75%, rgba(17,16,14,0.5) 100%)",
+            "linear-gradient(0deg, rgba(17,16,14,0.72) 0%, rgba(17,16,14,0.12) 38%, rgba(17,16,14,0.2) 100%)",
         }}
       />
     </AbsoluteFill>
-  );
-};
-
-const FactList: React.FC<{ facts: string[] }> = ({ facts }) => {
-  const frame = useCurrentFrame();
-  const safeFacts = facts.slice(0, 5);
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-      {safeFacts.map((fact, index) => {
-        const opacity = interpolate(frame, [70 + index * 14, 95 + index * 14], [0, 1], {
-          extrapolateLeft: "clamp",
-          extrapolateRight: "clamp",
-        });
-        const x = interpolate(frame, [70 + index * 14, 95 + index * 14], [-22, 0], {
-          extrapolateLeft: "clamp",
-          extrapolateRight: "clamp",
-        });
-
-        return (
-          <div
-            key={`${fact}-${index}`}
-            style={{
-              opacity,
-              transform: `translateX(${x}px)`,
-              display: "flex",
-              alignItems: "flex-start",
-              gap: 16,
-              color: "rgba(242,234,216,0.9)",
-              fontSize: 27,
-              lineHeight: 1.28,
-              fontWeight: 600,
-            }}
-          >
-            <span
-              style={{
-                width: 12,
-                height: 12,
-                backgroundColor: GOLD,
-                marginTop: 12,
-                flexShrink: 0,
-              }}
-            />
-            <span>{truncate(fact, 128)}</span>
-          </div>
-        );
-      })}
-    </div>
   );
 };
 
@@ -561,6 +603,7 @@ const CarChapterScene: React.FC<{
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const audioUrl = getCarAudioUrl(car);
+  const overlayOpacity = getOverlayOpacity(frame, duration, fps * 7, 18);
   const titleIn = spring({
     frame,
     fps,
@@ -568,9 +611,6 @@ const CarChapterScene: React.FC<{
   });
   const name = cleanText(car.name, "Unknown classic car");
   const hook = cleanText(car.hook, cleanText(car.voiceover || car.chapterVoiceover, ""));
-  const facts = Array.isArray(car.facts) && car.facts.length > 0
-    ? car.facts
-    : [cleanText(car.voiceover || car.chapterVoiceover, "A characterful classic with a story worth telling.")];
 
   return (
     <FadeWrap duration={duration}>
@@ -579,7 +619,9 @@ const CarChapterScene: React.FC<{
       {audioUrl ? <Audio src={audioUrl} /> : null}
       <AbsoluteFill
         style={{
-          padding: "86px 110px 76px 110px",
+          opacity: overlayOpacity,
+          justifyContent: "flex-end",
+          padding: "0 96px 82px 96px",
           fontFamily: "Inter, Arial, sans-serif",
         }}
       >
@@ -587,9 +629,9 @@ const CarChapterScene: React.FC<{
           style={{
             display: "flex",
             alignItems: "center",
-            gap: 22,
+            gap: 18,
             color: GOLD,
-            fontSize: 24,
+            fontSize: 22,
             fontWeight: 800,
             textTransform: "uppercase",
           }}
@@ -604,10 +646,10 @@ const CarChapterScene: React.FC<{
           style={{
             color: PAPER,
             fontFamily: "Georgia, Times New Roman, serif",
-            fontSize: 84,
+            fontSize: 72,
             lineHeight: 1.02,
-            marginTop: 34,
-            maxWidth: 1100,
+            marginTop: 24,
+            maxWidth: 980,
             transform: `translateY(${(1 - titleIn) * 30}px)`,
             textShadow: "0 6px 32px rgba(0,0,0,0.45)",
           }}
@@ -617,38 +659,28 @@ const CarChapterScene: React.FC<{
         <div
           style={{
             color: "rgba(242,234,216,0.76)",
-            fontSize: 31,
+            fontSize: 26,
             lineHeight: 1.3,
-            marginTop: 16,
+            marginTop: 12,
             fontWeight: 700,
           }}
         >
-          {[car.years, car.country].filter(Boolean).join(" | ")}
+          {[car.years, car.country].filter(Boolean).join(" / ")}
         </div>
-        <div
-          style={{
-            width: 500,
-            height: 5,
-            backgroundColor: GOLD,
-            marginTop: 34,
-            marginBottom: 34,
-          }}
-        />
-        <div
-          style={{
-            color: "rgba(242,234,216,0.92)",
-            fontSize: 33,
-            lineHeight: 1.32,
-            maxWidth: 1020,
-            fontWeight: 700,
-            marginBottom: 34,
-          }}
-        >
-          {truncate(hook, 160)}
-        </div>
-        <div style={{ maxWidth: 1030 }}>
-          <FactList facts={facts} />
-        </div>
+        {hook ? (
+          <div
+            style={{
+              color: "rgba(242,234,216,0.9)",
+              fontSize: 30,
+              lineHeight: 1.25,
+              maxWidth: 900,
+              fontWeight: 700,
+              marginTop: 22,
+            }}
+          >
+            {truncate(hook, 92)}
+          </div>
+        ) : null}
       </AbsoluteFill>
     </FadeWrap>
   );
