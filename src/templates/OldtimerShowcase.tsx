@@ -312,10 +312,12 @@ const IntroVideoLayer: React.FC<{
   }
 
   const cutFrames = Math.max(1, Math.round(INTRO_VIDEO_CUT_SECONDS * fps));
+  const requiredCuts = Math.ceil(duration / cutFrames);
   const cutCount = Math.max(
     1,
-    Math.min(validVideos.length, Math.ceil(duration / cutFrames))
+    Math.min(validVideos.length, requiredCuts)
   );
+  const hasEnoughClips = validVideos.length >= requiredCuts;
   const transitionFrames = Math.min(14, Math.max(4, Math.round(0.4 * fps)));
 
   return (
@@ -323,11 +325,12 @@ const IntroVideoLayer: React.FC<{
       {Array.from({ length: cutCount }).map((_, index) => {
         const video = validVideos[index];
         const from = index * cutFrames;
+        const isFinalClip = index === cutCount - 1;
         const segmentDuration = Math.min(
           duration - from,
-          index === cutCount - 1
+          hasEnoughClips && isFinalClip
             ? duration - from
-            : cutFrames + transitionFrames
+            : cutFrames + (isFinalClip ? 0 : transitionFrames)
         );
         const fadeFrames = Math.max(
           1,
