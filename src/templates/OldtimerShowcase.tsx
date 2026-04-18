@@ -502,6 +502,70 @@ const getCarMediaItems = (car: ShowcaseCar) => {
   return mediaItems.slice(0, 8);
 };
 
+const NostalgiaPhotoEffects: React.FC<{
+  index: number;
+  localFrame: number;
+  span: number;
+}> = ({ index, localFrame, span }) => {
+  const flicker =
+    0.93 +
+    Math.sin((localFrame + index * 17) * 0.31) * 0.025 +
+    Math.sin((localFrame + index * 9) * 0.07) * 0.018;
+  const scratchShift = Math.round(localFrame * (0.35 + (index % 3) * 0.08));
+  const reveal = interpolate(
+    localFrame,
+    [0, Math.max(1, Math.min(20, span * 0.12))],
+    [0, 1],
+    { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
+  );
+
+  return (
+    <AbsoluteFill style={{ opacity: reveal, pointerEvents: "none" }}>
+      <AbsoluteFill
+        style={{
+          mixBlendMode: "screen",
+          opacity: 0.12 * flicker,
+          background:
+            index % 2 === 0
+              ? "linear-gradient(110deg, rgba(255,232,180,0.46) 0%, rgba(255,232,180,0.08) 28%, transparent 58%)"
+              : "linear-gradient(250deg, rgba(209,163,59,0.38) 0%, rgba(209,163,59,0.08) 24%, transparent 55%)",
+        }}
+      />
+      <AbsoluteFill
+        style={{
+          opacity: 0.2,
+          backgroundImage:
+            "repeating-linear-gradient(90deg, transparent 0px, transparent 46px, rgba(255,255,255,0.18) 47px, transparent 49px), repeating-linear-gradient(0deg, rgba(0,0,0,0.08) 0px, transparent 1px, transparent 5px)",
+          backgroundPosition: `${scratchShift}px ${-scratchShift}px`,
+          mixBlendMode: "soft-light",
+        }}
+      />
+      <AbsoluteFill
+        style={{
+          opacity: 0.14,
+          backgroundImage:
+            "radial-gradient(circle at 18% 22%, rgba(255,255,255,0.32) 0 1px, transparent 2px), radial-gradient(circle at 72% 64%, rgba(0,0,0,0.36) 0 1px, transparent 2px), radial-gradient(circle at 44% 82%, rgba(255,255,255,0.22) 0 1px, transparent 2px)",
+          backgroundSize: "74px 74px, 96px 96px, 132px 132px",
+          backgroundPosition: `${scratchShift * 0.6}px 0, 0 ${scratchShift * 0.4}px, ${-scratchShift * 0.3}px ${scratchShift * 0.2}px`,
+          mixBlendMode: "overlay",
+        }}
+      />
+      <AbsoluteFill
+        style={{
+          background:
+            "radial-gradient(circle at center, transparent 0%, transparent 54%, rgba(17,16,14,0.34) 78%, rgba(17,16,14,0.74) 100%)",
+        }}
+      />
+      <AbsoluteFill
+        style={{
+          boxShadow:
+            "inset 0 0 0 18px rgba(242,234,216,0.045), inset 0 0 0 21px rgba(17,16,14,0.3), inset 0 0 90px rgba(17,16,14,0.52)",
+        }}
+      />
+    </AbsoluteFill>
+  );
+};
+
 const CarMediaItem: React.FC<{
   media: ShowcaseMedia;
   frame: number;
@@ -533,6 +597,12 @@ const CarMediaItem: React.FC<{
   });
   const x = index % 3 === 1 ? -drift : index % 3 === 2 ? drift * 0.55 : 0;
   const y = index % 3 === 0 ? drift * 0.45 : 0;
+  const rotation = media.mediaType === "video" ? 0 : (index % 2 === 0 ? -0.28 : 0.24);
+  const mediaFilter =
+    media.mediaType === "video"
+      ? "contrast(1.06) saturate(0.94)"
+      : "sepia(0.24) contrast(1.1) saturate(0.82) brightness(0.98)";
+  const transform = `scale(${scale}) translate(${x}px, ${y}px) rotate(${rotation}deg)`;
 
   return (
     <AbsoluteFill style={{ opacity }}>
@@ -544,8 +614,8 @@ const CarMediaItem: React.FC<{
             width: "100%",
             height: "100%",
             objectFit: "cover",
-            filter: "contrast(1.06) saturate(0.94)",
-            transform: `scale(${scale}) translate(${x}px, ${y}px)`,
+            filter: mediaFilter,
+            transform,
           }}
         />
       ) : (
@@ -555,10 +625,13 @@ const CarMediaItem: React.FC<{
             width: "100%",
             height: "100%",
             objectFit: "cover",
-            filter: "contrast(1.06) saturate(0.94)",
-            transform: `scale(${scale}) translate(${x}px, ${y}px)`,
+            filter: mediaFilter,
+            transform,
           }}
         />
+      )}
+      {media.mediaType === "video" ? null : (
+        <NostalgiaPhotoEffects index={index} localFrame={localFrame} span={span} />
       )}
     </AbsoluteFill>
   );
