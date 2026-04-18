@@ -30,6 +30,8 @@ export interface ShowcaseIntro {
   hook?: string;
   voiceover?: string;
   durationSeconds?: number;
+  voiceoverDurationSeconds?: number;
+  audioDurationSeconds?: number;
   voiceoverUrl?: string;
   audioUrl?: string;
   videos?: ShowcaseMedia[];
@@ -73,6 +75,8 @@ export interface OldtimerShowcaseProps {
   outro?: {
     voiceover?: string;
     durationSeconds?: number;
+    voiceoverDurationSeconds?: number;
+    audioDurationSeconds?: number;
     voiceoverUrl?: string;
     audioUrl?: string;
   };
@@ -148,6 +152,18 @@ const secondsToFrames = (seconds: number | undefined, fps: number) => {
   return Math.max(MIN_SECTION_FRAMES, Math.round((seconds || 0) * fps));
 };
 
+const getVoiceoverSeconds = (section?: {
+  durationSeconds?: number;
+  voiceoverDurationSeconds?: number;
+  audioDurationSeconds?: number;
+}) => {
+  return (
+    section?.audioDurationSeconds ||
+    section?.voiceoverDurationSeconds ||
+    section?.durationSeconds
+  );
+};
+
 const cleanText = (value: unknown, fallback = "") => {
   if (typeof value !== "string") {
     return fallback;
@@ -202,9 +218,10 @@ export const buildOldtimerShowcaseTimeline = (
     : oldtimerShowcaseDefaultProps.cars || []) as ShowcaseCar[];
   const targetSeconds = props.targetDurationSeconds || 0;
   const introSeconds =
-    props.intro?.durationSeconds ||
+    getVoiceoverSeconds(props.intro) ||
     (targetSeconds ? clamp(Math.round(targetSeconds * 0.1), 45, 90) : 72);
-  const baseOutroSeconds = props.outro?.durationSeconds || DEFAULT_OUTRO_SECONDS;
+  const baseOutroSeconds =
+    getVoiceoverSeconds(props.outro) || DEFAULT_OUTRO_SECONDS;
   const reservedSeconds = introSeconds + baseOutroSeconds;
   const sharedChapterSeconds =
     cars.length > 0 && targetSeconds > reservedSeconds
@@ -222,10 +239,10 @@ export const buildOldtimerShowcaseTimeline = (
 
   cars.forEach((car, index) => {
     const seconds =
-      car.durationSeconds ||
-      car.estimatedDurationSeconds ||
       car.audioDurationSeconds ||
       car.voiceoverDurationSeconds ||
+      car.durationSeconds ||
+      car.estimatedDurationSeconds ||
       sharedChapterSeconds;
     const duration = secondsToFrames(seconds, fps);
     sections.push({ type: "car", from: cursor, duration, car, index });

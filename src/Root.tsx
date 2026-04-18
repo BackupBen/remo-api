@@ -17,6 +17,90 @@ import {
   getOldtimerShowcaseDurationInFrames,
   oldtimerShowcaseDefaultProps,
 } from "./templates/OldtimerShowcase";
+import type { OldtimerShowcaseProps } from "./templates/OldtimerShowcase";
+
+const getSectionAudioUrl = (section?: {
+  voiceoverUrl?: string;
+  audioUrl?: string;
+}) => section?.voiceoverUrl || section?.audioUrl || "";
+
+const measureAudioSeconds = async (
+  url: string,
+  fallback?: number
+): Promise<number | undefined> => {
+  if (!url) {
+    return fallback;
+  }
+
+  try {
+    return await getAudioDurationInSeconds(url);
+  } catch (error) {
+    console.error("[OldtimerShowcase] getAudioDurationInSeconds failed for", url, error);
+    return fallback;
+  }
+};
+
+const withMeasuredOldtimerAudio = async (
+  props: OldtimerShowcaseProps
+): Promise<OldtimerShowcaseProps> => {
+  const introUrl = getSectionAudioUrl(props.intro);
+  const outroUrl = getSectionAudioUrl(props.outro);
+  const cars = props.cars || [];
+
+  const [introSeconds, outroSeconds, carSeconds] = await Promise.all([
+    measureAudioSeconds(
+      introUrl,
+      props.intro?.audioDurationSeconds ||
+        props.intro?.voiceoverDurationSeconds ||
+        props.intro?.durationSeconds
+    ),
+    measureAudioSeconds(
+      outroUrl,
+      props.outro?.audioDurationSeconds ||
+        props.outro?.voiceoverDurationSeconds ||
+        props.outro?.durationSeconds
+    ),
+    Promise.all(
+      cars.map((car) =>
+        measureAudioSeconds(
+          getSectionAudioUrl(car),
+          car.audioDurationSeconds ||
+            car.voiceoverDurationSeconds ||
+            car.durationSeconds ||
+            car.estimatedDurationSeconds
+        )
+      )
+    ),
+  ]);
+
+  return {
+    ...props,
+    intro: {
+      ...props.intro,
+      durationSeconds: introSeconds || props.intro?.durationSeconds,
+      audioDurationSeconds: introSeconds || props.intro?.audioDurationSeconds,
+      voiceoverDurationSeconds:
+        introSeconds || props.intro?.voiceoverDurationSeconds,
+    },
+    cars: cars.map((car, index) => {
+      const seconds = carSeconds[index];
+
+      return {
+        ...car,
+        durationSeconds: seconds || car.durationSeconds,
+        audioDurationSeconds: seconds || car.audioDurationSeconds,
+        voiceoverDurationSeconds: seconds || car.voiceoverDurationSeconds,
+      };
+    }),
+    outro: {
+      ...props.outro,
+      durationSeconds: outroSeconds || props.outro?.durationSeconds,
+      audioDurationSeconds: outroSeconds || props.outro?.audioDurationSeconds,
+      voiceoverDurationSeconds:
+        outroSeconds || props.outro?.voiceoverDurationSeconds,
+    },
+  };
+};
 
 export const Root: React.FC = () => {
   return (
@@ -126,9 +210,12 @@ export const Root: React.FC = () => {
         height={1080}
         fps={30}
         durationInFrames={getOldtimerShowcaseDurationInFrames(oldtimerShowcaseDefaultProps)}
-        calculateMetadata={({ props }) => {
+        calculateMetadata={async ({ props }) => {
+          const measuredProps = await withMeasuredOldtimerAudio(props);
+
           return {
-            durationInFrames: getOldtimerShowcaseDurationInFrames(props),
+            durationInFrames: getOldtimerShowcaseDurationInFrames(measuredProps),
+            props: measuredProps,
           };
         }}
         defaultProps={oldtimerShowcaseDefaultProps}
