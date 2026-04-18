@@ -96,6 +96,7 @@ export const OLDTIMER_SHOWCASE_FPS = 30;
 const DEFAULT_CHAPTER_SECONDS = 60;
 const DEFAULT_OUTRO_SECONDS = 45;
 const MIN_SECTION_FRAMES = 30;
+const INTRO_VIDEO_CUT_SECONDS = 3.5;
 const GOLD = "#d1a33b";
 const GREEN = "#174f3f";
 const RED = "#ad2f2d";
@@ -216,20 +217,13 @@ export const buildOldtimerShowcaseTimeline = (
   const cars = (props.cars && props.cars.length > 0
     ? props.cars
     : oldtimerShowcaseDefaultProps.cars || []) as ShowcaseCar[];
-  const targetSeconds = props.targetDurationSeconds || 0;
   const introSeconds =
     getVoiceoverSeconds(props.intro) ||
-    (targetSeconds ? clamp(Math.round(targetSeconds * 0.1), 45, 90) : 72);
+    oldtimerShowcaseDefaultProps.intro?.durationSeconds ||
+    72;
   const baseOutroSeconds =
     getVoiceoverSeconds(props.outro) || DEFAULT_OUTRO_SECONDS;
-  const reservedSeconds = introSeconds + baseOutroSeconds;
-  const sharedChapterSeconds =
-    cars.length > 0 && targetSeconds > reservedSeconds
-      ? Math.max(
-          45,
-          Math.floor((targetSeconds - reservedSeconds) / cars.length)
-        )
-      : DEFAULT_CHAPTER_SECONDS;
+  const sharedChapterSeconds = DEFAULT_CHAPTER_SECONDS;
 
   const sections: SectionTiming[] = [];
   let cursor = 0;
@@ -249,18 +243,14 @@ export const buildOldtimerShowcaseTimeline = (
     cursor += duration;
   });
 
-  const targetFrames = targetSeconds ? secondsToFrames(targetSeconds, fps) : 0;
-  const remainingOutroFrames = Math.max(
-    secondsToFrames(baseOutroSeconds, fps),
-    targetFrames - cursor
-  );
-  sections.push({ type: "outro", from: cursor, duration: remainingOutroFrames });
-  cursor += remainingOutroFrames;
+  const outroDuration = secondsToFrames(baseOutroSeconds, fps);
+  sections.push({ type: "outro", from: cursor, duration: outroDuration });
+  cursor += outroDuration;
 
   return {
     cars,
     sections,
-    totalFrames: Math.max(cursor, targetFrames, MIN_SECTION_FRAMES),
+    totalFrames: Math.max(cursor, MIN_SECTION_FRAMES),
   };
 };
 
@@ -313,6 +303,7 @@ const IntroVideoLayer: React.FC<{
   videos: ShowcaseMedia[];
   duration: number;
 }> = ({ videos, duration }) => {
+  const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const validVideos = videos.filter((video) => getMediaUrl(video));
 
@@ -320,23 +311,48 @@ const IntroVideoLayer: React.FC<{
     return null;
   }
 
+  const cutFrames = Math.max(1, Math.round(INTRO_VIDEO_CUT_SECONDS * fps));
+  const cutCount = Math.max(1, Math.ceil(duration / cutFrames));
+  const transitionFrames = Math.min(14, Math.max(4, Math.round(0.4 * fps)));
+
   return (
     <AbsoluteFill>
-      {validVideos.map((video, index) => {
-        const segmentStart =
-          typeof video.start === "number"
-            ? Math.max(0, Math.round(video.start * fps))
-            : Math.floor((duration / validVideos.length) * index);
-        const segmentEnd =
-          typeof video.end === "number"
-            ? Math.round(video.end * fps)
-            : Math.floor((duration / validVideos.length) * (index + 1));
-        const from = clamp(segmentStart, 0, Math.max(0, duration - 1));
-        const segmentDuration = Math.max(30, Math.min(duration - from, segmentEnd - from));
+      {Array.from({ length: cutCount }).map((_, index) => {
+        const video = validVideos[index % validVideos.length];
+        const from = index * cutFrames;
+        const segmentDuration = Math.min(
+          duration - from,
+          cutFrames + (index === cutCount - 1 ? 0 : transitionFrames)
+        );
+        const fadeFrames = Math.max(
+          1,
+          Math.min(transitionFrames, Math.floor(segmentDuration / 3))
+        );
+        const localFrame = clamp(frame - from, 0, Math.max(1, segmentDuration));
+        const scale = interpolate(
+          localFrame,
+          [0, Math.max(1, segmentDuration)],
+          [1.02, 1.08],
+          { extrapolateRight: "clamp" }
+        );
+        const opacity = interpolate(
+          localFrame,
+          [0, fadeFrames, Math.max(fadeFrames, segmentDuration - fadeFrames), segmentDuration],
+          [0, 1, 1, 0],
+          { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
+        );
+
+        if (segmentDuration <= 0) {
+          return null;
+        }
 
         return (
-          <Sequence key={`${getMediaUrl(video)}-${index}`} from={from} durationInFrames={segmentDuration}>
-            <AbsoluteFill>
+          <Sequence
+            key={`${getMediaUrl(video)}-${index}`}
+            from={from}
+            durationInFrames={segmentDuration}
+          >
+            <AbsoluteFill style={{ opacity }}>
               <OffthreadVideo
                 src={getMediaUrl(video)}
                 volume={0}
@@ -345,6 +361,7 @@ const IntroVideoLayer: React.FC<{
                   height: "100%",
                   objectFit: "cover",
                   filter: "contrast(1.05) saturate(0.88)",
+                  transform: `scale(${scale})`,
                 }}
               />
               <AbsoluteFill
