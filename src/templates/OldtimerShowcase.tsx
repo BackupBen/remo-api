@@ -26,6 +26,21 @@ export interface ShowcaseMedia {
   fallbackNeeded?: boolean;
 }
 
+export interface ShowcaseGraphicStat {
+  label?: string;
+  value?: string;
+}
+
+export interface ShowcaseGraphicMoment {
+  kind?: "specCard" | "timeline" | "opinion";
+  startRatio?: number;
+  durationSeconds?: number;
+  headline?: string;
+  subhead?: string;
+  stats?: ShowcaseGraphicStat[];
+  style?: "period-blueprint" | "gauge-card" | "archive-card";
+}
+
 export interface ShowcaseIntro {
   hook?: string;
   voiceover?: string;
@@ -60,6 +75,7 @@ export interface ShowcaseCar {
   imageUrls?: string[];
   mediaUrls?: string[];
   media?: ShowcaseMedia[];
+  graphicMoments?: ShowcaseGraphicMoment[];
 }
 
 export interface OldtimerShowcaseProps {
@@ -502,6 +518,51 @@ const getCarMediaItems = (car: ShowcaseCar) => {
   return mediaItems.slice(0, 8);
 };
 
+const compactFact = (value: string, maxLength = 64) => {
+  return truncate(
+    value
+      .replace(/\s+/g, " ")
+      .replace(/\.$/, "")
+      .trim(),
+    maxLength
+  );
+};
+
+const getCarGraphicMoments = (car: ShowcaseCar): ShowcaseGraphicMoment[] => {
+  const provided = (car.graphicMoments || [])
+    .filter((moment) => moment && (moment.headline || moment.stats?.length))
+    .map((moment, index) => ({
+      kind: "specCard" as const,
+      startRatio: index === 0 ? 0.22 : clamp(moment.startRatio ?? 0.58, 0.12, 0.82),
+      durationSeconds: clamp(moment.durationSeconds ?? 5.5, 3.5, 8),
+      style: moment.style || (index % 2 === 0 ? "period-blueprint" : "gauge-card"),
+      ...moment,
+    }));
+
+  if (provided.length > 0) {
+    return provided.slice(0, 2);
+  }
+
+  const facts = (car.facts || []).map((fact) => compactFact(fact)).filter(Boolean);
+  const stats: ShowcaseGraphicStat[] = [
+    { label: "Built", value: cleanText(car.years, "Period classic") },
+    { label: "Origin", value: cleanText(car.country, "Classic car") },
+    { label: "Detail", value: facts[0] || cleanText(car.hook, "Distinctive oldtimer character") },
+  ].filter((stat) => stat.value);
+
+  return [
+    {
+      kind: "specCard",
+      startRatio: 0.22,
+      durationSeconds: 5.8,
+      headline: "What makes it matter",
+      subhead: cleanText(car.name, "Classic car"),
+      stats,
+      style: "period-blueprint",
+    },
+  ];
+};
+
 const NostalgiaPhotoEffects: React.FC<{
   index: number;
   localFrame: number;
@@ -709,6 +770,237 @@ const CarMediaLayer: React.FC<{
   );
 };
 
+const BlueprintSpecCard: React.FC<{
+  moment: ShowcaseGraphicMoment;
+  frame: number;
+  start: number;
+  duration: number;
+  index: number;
+}> = ({ moment, frame, start, duration, index }) => {
+  const { fps } = useVideoConfig();
+  const localFrame = frame - start;
+  const fade = Math.max(10, Math.round(fps * 0.35));
+  const opacity = interpolate(
+    localFrame,
+    [0, fade, Math.max(fade + 1, duration - fade), duration],
+    [0, 1, 1, 0],
+    { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
+  );
+  const entrance = spring({
+    frame: Math.max(0, localFrame),
+    fps,
+    config: { stiffness: 82, damping: 17 },
+  });
+  const draw = interpolate(localFrame, [0, Math.max(1, fps * 1.25)], [0, 1], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+  const needle = interpolate(draw, [0, 1], [-116, 92], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+  const stats = (moment.stats || []).slice(0, 3);
+  const isArchive = moment.style === "archive-card";
+  const accent = index % 2 === 0 ? GOLD : RED;
+  const cardX = interpolate(entrance, [0, 1], [92, 0]);
+
+  if (opacity <= 0.001) {
+    return null;
+  }
+
+  return (
+    <AbsoluteFill
+      style={{
+        alignItems: "flex-end",
+        justifyContent: "center",
+        paddingRight: 82,
+        pointerEvents: "none",
+        opacity,
+      }}
+    >
+      <svg
+        width="650"
+        height="440"
+        viewBox="0 0 650 440"
+        style={{
+          transform: `translateX(${cardX}px) rotate(${isArchive ? -0.7 : 0.35}deg)`,
+          filter: "drop-shadow(0 22px 48px rgba(0,0,0,0.45))",
+        }}
+      >
+        <rect
+          x="0"
+          y="0"
+          width="650"
+          height="440"
+          rx="8"
+          fill={isArchive ? "rgba(242,234,216,0.9)" : "rgba(17,16,14,0.82)"}
+          stroke={accent}
+          strokeWidth="3"
+        />
+        <rect
+          x="18"
+          y="18"
+          width="614"
+          height="404"
+          rx="4"
+          fill="none"
+          stroke={isArchive ? "rgba(17,16,14,0.32)" : "rgba(242,234,216,0.24)"}
+          strokeWidth="2"
+          strokeDasharray={`${Math.max(12, draw * 1200)} 1200`}
+        />
+        <path
+          d="M48 104 H604 M48 330 H604"
+          stroke={accent}
+          strokeWidth="3"
+          strokeLinecap="round"
+          strokeDasharray={`${Math.max(1, draw * 556)} 556`}
+        />
+        <text
+          x="48"
+          y="58"
+          fill={isArchive ? INK : GOLD}
+          fontFamily="Inter, Arial, sans-serif"
+          fontSize="21"
+          fontWeight="800"
+          letterSpacing="0"
+        >
+          ANIMATED SPEC MOMENT
+        </text>
+        <text
+          x="48"
+          y="91"
+          fill={isArchive ? INK : PAPER}
+          fontFamily="Georgia, Times New Roman, serif"
+          fontSize="37"
+          fontWeight="700"
+        >
+          {truncate(cleanText(moment.headline, "Key detail"), 28)}
+        </text>
+        <text
+          x="48"
+          y="137"
+          fill={isArchive ? "rgba(17,16,14,0.72)" : "rgba(242,234,216,0.72)"}
+          fontFamily="Inter, Arial, sans-serif"
+          fontSize="23"
+          fontWeight="700"
+        >
+          {truncate(cleanText(moment.subhead, ""), 38)}
+        </text>
+
+        <g transform="translate(472 229)">
+          <circle
+            r="78"
+            fill="none"
+            stroke={isArchive ? "rgba(17,16,14,0.24)" : "rgba(242,234,216,0.22)"}
+            strokeWidth="18"
+          />
+          <path
+            d="M -66 38 A 76 76 0 0 1 66 38"
+            fill="none"
+            stroke={accent}
+            strokeWidth="16"
+            strokeLinecap="round"
+            strokeDasharray={`${Math.max(1, draw * 210)} 210`}
+          />
+          <line
+            x1="0"
+            y1="0"
+            x2="0"
+            y2="-62"
+            stroke={accent}
+            strokeWidth="6"
+            strokeLinecap="round"
+            transform={`rotate(${needle})`}
+          />
+          <circle r="9" fill={accent} />
+          <text
+            x="0"
+            y="110"
+            textAnchor="middle"
+            fill={isArchive ? INK : "rgba(242,234,216,0.72)"}
+            fontFamily="Inter, Arial, sans-serif"
+            fontSize="20"
+            fontWeight="800"
+          >
+            PERIOD SIGNAL
+          </text>
+        </g>
+
+        {stats.map((stat, statIndex) => {
+          const rowY = 190 + statIndex * 58;
+          const rowOpacity = interpolate(
+            localFrame,
+            [fps * 0.35 + statIndex * 8, fps * 0.7 + statIndex * 8],
+            [0, 1],
+            { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
+          );
+
+          return (
+            <g key={`${stat.label}-${statIndex}`} opacity={rowOpacity}>
+              <circle cx="56" cy={rowY - 8} r="6" fill={accent} />
+              <text
+                x="78"
+                y={rowY - 18}
+                fill={isArchive ? "rgba(17,16,14,0.62)" : "rgba(242,234,216,0.62)"}
+                fontFamily="Inter, Arial, sans-serif"
+                fontSize="18"
+                fontWeight="800"
+              >
+                {truncate(cleanText(stat.label, "Detail").toUpperCase(), 18)}
+              </text>
+              <text
+                x="78"
+                y={rowY + 12}
+                fill={isArchive ? INK : PAPER}
+                fontFamily="Inter, Arial, sans-serif"
+                fontSize="24"
+                fontWeight="800"
+              >
+                {truncate(cleanText(stat.value, ""), 35)}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
+    </AbsoluteFill>
+  );
+};
+
+const CarGraphicLayer: React.FC<{
+  car: ShowcaseCar;
+  duration: number;
+}> = ({ car, duration }) => {
+  const frame = useCurrentFrame();
+  const { fps } = useVideoConfig();
+  const moments = getCarGraphicMoments(car);
+
+  return (
+    <>
+      {moments.map((moment, index) => {
+        const momentFrames = Math.max(
+          fps * 3,
+          Math.round((moment.durationSeconds || 5.5) * fps)
+        );
+        const start = Math.min(
+          Math.max(fps * 8, Math.round(duration * clamp(moment.startRatio ?? 0.22, 0.08, 0.86))),
+          Math.max(0, duration - momentFrames - fps)
+        );
+
+        return (
+          <BlueprintSpecCard
+            key={`${moment.headline || "moment"}-${index}`}
+            moment={moment}
+            frame={frame}
+            start={start}
+            duration={Math.min(momentFrames, Math.max(1, duration - start))}
+            index={index}
+          />
+        );
+      })}
+    </>
+  );
+};
+
 const CarChapterScene: React.FC<{
   car: ShowcaseCar;
   index: number;
@@ -732,6 +1024,7 @@ const CarChapterScene: React.FC<{
       <BaseBackground accent={index % 2 === 0 ? GOLD : GREEN} />
       <CarMediaLayer car={car} duration={duration} />
       {audioUrl ? <Audio src={audioUrl} /> : null}
+      <CarGraphicLayer car={car} duration={duration} />
       <AbsoluteFill
         style={{
           opacity: overlayOpacity,
