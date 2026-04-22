@@ -528,6 +528,44 @@ const compactFact = (value: string, maxLength = 64) => {
   );
 };
 
+const splitSvgLines = (
+  value: string,
+  maxCharsPerLine: number,
+  maxLines: number
+) => {
+  const words = value.replace(/\s+/g, " ").trim().split(" ").filter(Boolean);
+  const lines: string[] = [];
+  let current = "";
+
+  words.forEach((word) => {
+    const next = current ? `${current} ${word}` : word;
+    if (next.length <= maxCharsPerLine) {
+      current = next;
+      return;
+    }
+
+    if (current) {
+      lines.push(current);
+    }
+    current = word;
+  });
+
+  if (current) {
+    lines.push(current);
+  }
+
+  const clipped = lines.slice(0, maxLines);
+  if (lines.length > maxLines && clipped.length > 0) {
+    const last = clipped[clipped.length - 1].replace(/[.。]+$/, "");
+    clipped[clipped.length - 1] = `${truncate(
+      last,
+      Math.max(12, maxCharsPerLine - 4)
+    ).replace(/\.\.\.$/, "")}...`;
+  }
+
+  return clipped.length > 0 ? clipped : [""];
+};
+
 const getCarGraphicMoments = (car: ShowcaseCar): ShowcaseGraphicMoment[] => {
   const provided = (car.graphicMoments || [])
     .filter((moment) => moment && (moment.headline || moment.stats?.length))
@@ -789,20 +827,25 @@ const BlueprintSpecCard: React.FC<{
   const entrance = spring({
     frame: Math.max(0, localFrame),
     fps,
-    config: { stiffness: 82, damping: 17 },
+    config: { stiffness: 62, damping: 20 },
   });
   const draw = interpolate(localFrame, [0, Math.max(1, fps * 1.25)], [0, 1], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
-  const needle = interpolate(draw, [0, 1], [-116, 92], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
-  const stats = (moment.stats || []).slice(0, 3);
+  const stats = (moment.stats || []).slice(0, 2);
   const isArchive = moment.style === "archive-card";
   const accent = index % 2 === 0 ? GOLD : RED;
-  const cardX = interpolate(entrance, [0, 1], [92, 0]);
+  const cardY = interpolate(entrance, [0, 1], [34, 0]);
+  const cardScale = interpolate(entrance, [0, 1], [0.985, 1]);
+  const rawHeadline = cleanText(moment.headline, "Archive note");
+  const displayHeadline =
+    rawHeadline.toLowerCase() === "period signal"
+      ? "Why it stood out"
+      : rawHeadline;
+  const headlineLines = splitSvgLines(displayHeadline, 26, 2);
+  const subheadLines = splitSvgLines(cleanText(moment.subhead, ""), 36, 1);
+  const carPathLength = 390;
 
   if (opacity <= 0.001) {
     return null;
@@ -811,152 +854,168 @@ const BlueprintSpecCard: React.FC<{
   return (
     <AbsoluteFill
       style={{
-        alignItems: "flex-end",
-        justifyContent: "center",
-        paddingRight: 82,
+        alignItems: "flex-start",
+        justifyContent: "flex-end",
+        paddingLeft: 88,
+        paddingBottom: 74,
         pointerEvents: "none",
         opacity,
       }}
     >
       <svg
-        width="650"
-        height="440"
-        viewBox="0 0 650 440"
+        width="720"
+        height="292"
+        viewBox="0 0 720 292"
         style={{
-          transform: `translateX(${cardX}px) rotate(${isArchive ? -0.7 : 0.35}deg)`,
-          filter: "drop-shadow(0 22px 48px rgba(0,0,0,0.45))",
+          transform: `translateY(${cardY}px) scale(${cardScale}) rotate(${isArchive ? -0.35 : 0.2}deg)`,
+          filter: "drop-shadow(0 20px 44px rgba(0,0,0,0.42))",
         }}
       >
         <rect
           x="0"
           y="0"
-          width="650"
-          height="440"
+          width="720"
+          height="292"
           rx="8"
-          fill={isArchive ? "rgba(242,234,216,0.9)" : "rgba(17,16,14,0.82)"}
+          fill={isArchive ? "rgba(242,234,216,0.9)" : "rgba(17,16,14,0.74)"}
           stroke={accent}
-          strokeWidth="3"
+          strokeWidth="2"
         />
         <rect
-          x="18"
-          y="18"
-          width="614"
-          height="404"
+          x="17"
+          y="17"
+          width="686"
+          height="258"
           rx="4"
           fill="none"
           stroke={isArchive ? "rgba(17,16,14,0.32)" : "rgba(242,234,216,0.24)"}
-          strokeWidth="2"
-          strokeDasharray={`${Math.max(12, draw * 1200)} 1200`}
+          strokeWidth="1.5"
+          strokeDasharray={`${Math.max(12, draw * 980)} 980`}
         />
         <path
-          d="M48 104 H604 M48 330 H604"
+          d="M42 92 H430 M42 244 H430"
           stroke={accent}
-          strokeWidth="3"
+          strokeWidth="2.5"
           strokeLinecap="round"
-          strokeDasharray={`${Math.max(1, draw * 556)} 556`}
+          strokeDasharray={`${Math.max(1, draw * 388)} 388`}
         />
         <text
-          x="48"
-          y="58"
+          x="42"
+          y="43"
           fill={isArchive ? INK : GOLD}
           fontFamily="Inter, Arial, sans-serif"
-          fontSize="21"
+          fontSize="15"
           fontWeight="800"
           letterSpacing="0"
         >
-          ANIMATED SPEC MOMENT
+          ARCHIVE NOTE
         </text>
         <text
-          x="48"
-          y="91"
+          x="42"
+          y="69"
           fill={isArchive ? INK : PAPER}
           fontFamily="Georgia, Times New Roman, serif"
-          fontSize="37"
+          fontSize="31"
           fontWeight="700"
         >
-          {truncate(cleanText(moment.headline, "Key detail"), 28)}
+          {headlineLines.map((line, lineIndex) => (
+            <tspan key={`${line}-${lineIndex}`} x="42" dy={lineIndex === 0 ? 0 : 34}>
+              {line}
+            </tspan>
+          ))}
         </text>
         <text
-          x="48"
-          y="137"
+          x="42"
+          y={headlineLines.length > 1 ? 140 : 118}
           fill={isArchive ? "rgba(17,16,14,0.72)" : "rgba(242,234,216,0.72)"}
           fontFamily="Inter, Arial, sans-serif"
-          fontSize="23"
+          fontSize="19"
           fontWeight="700"
         >
-          {truncate(cleanText(moment.subhead, ""), 38)}
+          {subheadLines[0]}
         </text>
 
-        <g transform="translate(472 229)">
-          <circle
-            r="78"
+        <g
+          transform="translate(474 98)"
+          opacity={interpolate(localFrame, [fps * 0.35, fps * 0.95], [0, 1], {
+            extrapolateLeft: "clamp",
+            extrapolateRight: "clamp",
+          })}
+        >
+          <path
+            d="M28 104 C50 72 80 54 119 49 L169 49 C201 53 227 73 246 103 M24 105 H272 M78 105 A22 22 0 1 0 122 105 A22 22 0 1 0 78 105 M194 105 A22 22 0 1 0 238 105 A22 22 0 1 0 194 105 M94 49 C111 28 134 20 162 21 C181 23 199 35 217 53"
             fill="none"
-            stroke={isArchive ? "rgba(17,16,14,0.24)" : "rgba(242,234,216,0.22)"}
-            strokeWidth="18"
+            stroke={isArchive ? "rgba(17,16,14,0.64)" : "rgba(242,234,216,0.62)"}
+            strokeWidth="3"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeDasharray={carPathLength}
+            strokeDashoffset={carPathLength - draw * carPathLength}
           />
           <path
-            d="M -66 38 A 76 76 0 0 1 66 38"
-            fill="none"
+            d="M16 132 H283"
             stroke={accent}
-            strokeWidth="16"
+            strokeWidth="2.5"
             strokeLinecap="round"
-            strokeDasharray={`${Math.max(1, draw * 210)} 210`}
+            strokeDasharray={`${Math.max(1, draw * 267)} 267`}
           />
-          <line
-            x1="0"
-            y1="0"
-            x2="0"
-            y2="-62"
-            stroke={accent}
-            strokeWidth="6"
-            strokeLinecap="round"
-            transform={`rotate(${needle})`}
-          />
-          <circle r="9" fill={accent} />
           <text
-            x="0"
-            y="110"
+            x="150"
+            y="162"
             textAnchor="middle"
-            fill={isArchive ? INK : "rgba(242,234,216,0.72)"}
+            fill={isArchive ? "rgba(17,16,14,0.58)" : "rgba(242,234,216,0.52)"}
             fontFamily="Inter, Arial, sans-serif"
-            fontSize="20"
+            fontSize="15"
             fontWeight="800"
           >
-            PERIOD SIGNAL
+            PERIOD DETAIL
           </text>
         </g>
 
         {stats.map((stat, statIndex) => {
-          const rowY = 190 + statIndex * 58;
+          const rowY = 172 + statIndex * 58;
           const rowOpacity = interpolate(
             localFrame,
             [fps * 0.35 + statIndex * 8, fps * 0.7 + statIndex * 8],
             [0, 1],
             { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
           );
+          const rowX = interpolate(rowOpacity, [0, 1], [-14, 0], {
+            extrapolateLeft: "clamp",
+            extrapolateRight: "clamp",
+          });
+          const valueLines = splitSvgLines(cleanText(stat.value, ""), 33, 2);
 
           return (
-            <g key={`${stat.label}-${statIndex}`} opacity={rowOpacity}>
-              <circle cx="56" cy={rowY - 8} r="6" fill={accent} />
+            <g
+              key={`${stat.label}-${statIndex}`}
+              opacity={rowOpacity}
+              transform={`translate(${rowX} 0)`}
+            >
+              <circle cx="49" cy={rowY - 8} r="4.5" fill={accent} />
               <text
-                x="78"
+                x="70"
                 y={rowY - 18}
                 fill={isArchive ? "rgba(17,16,14,0.62)" : "rgba(242,234,216,0.62)"}
                 fontFamily="Inter, Arial, sans-serif"
-                fontSize="18"
+                fontSize="14"
                 fontWeight="800"
               >
-                {truncate(cleanText(stat.label, "Detail").toUpperCase(), 18)}
+                {truncate(cleanText(stat.label, "Detail").toUpperCase(), 16)}
               </text>
               <text
-                x="78"
+                x="70"
                 y={rowY + 12}
                 fill={isArchive ? INK : PAPER}
                 fontFamily="Inter, Arial, sans-serif"
-                fontSize="24"
+                fontSize="19"
                 fontWeight="800"
               >
-                {truncate(cleanText(stat.value, ""), 35)}
+                {valueLines.map((line, lineIndex) => (
+                  <tspan key={`${line}-${lineIndex}`} x="70" dy={lineIndex === 0 ? 0 : 22}>
+                    {line}
+                  </tspan>
+                ))}
               </text>
             </g>
           );
