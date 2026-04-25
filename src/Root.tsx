@@ -18,6 +18,15 @@ import {
   oldtimerShowcaseDefaultProps,
 } from "./templates/OldtimerShowcase";
 import type { OldtimerShowcaseProps } from "./templates/OldtimerShowcase";
+import {
+  ClassicCarFacts,
+  classicCarFactsDefaultProps,
+  getClassicCarFactsDurationInFrames,
+} from "./templates/ClassicCarFacts";
+import type {
+  ClassicCarFactsProps,
+  FactListItem,
+} from "./templates/ClassicCarFacts";
 
 const getSectionAudioUrl = (section?: {
   voiceoverUrl?: string;
@@ -90,6 +99,68 @@ const withMeasuredOldtimerAudio = async (
         durationSeconds: seconds || car.durationSeconds,
         audioDurationSeconds: seconds || car.audioDurationSeconds,
         voiceoverDurationSeconds: seconds || car.voiceoverDurationSeconds,
+      };
+    }),
+    outro: {
+      ...props.outro,
+      durationSeconds: outroSeconds || props.outro?.durationSeconds,
+      audioDurationSeconds: outroSeconds || props.outro?.audioDurationSeconds,
+      voiceoverDurationSeconds:
+        outroSeconds || props.outro?.voiceoverDurationSeconds,
+    },
+  };
+};
+
+const withMeasuredFactListAudio = async (
+  props: ClassicCarFactsProps
+): Promise<ClassicCarFactsProps> => {
+  const introUrl = getSectionAudioUrl(props.intro);
+  const outroUrl = getSectionAudioUrl(props.outro);
+  const facts = (props.facts || []) as FactListItem[];
+
+  const [introSeconds, outroSeconds, factSeconds] = await Promise.all([
+    measureAudioSeconds(
+      introUrl,
+      props.intro?.audioDurationSeconds ||
+        props.intro?.voiceoverDurationSeconds ||
+        props.intro?.durationSeconds
+    ),
+    measureAudioSeconds(
+      outroUrl,
+      props.outro?.audioDurationSeconds ||
+        props.outro?.voiceoverDurationSeconds ||
+        props.outro?.durationSeconds
+    ),
+    Promise.all(
+      facts.map((fact) =>
+        measureAudioSeconds(
+          getSectionAudioUrl(fact),
+          fact.audioDurationSeconds ||
+            fact.voiceoverDurationSeconds ||
+            fact.durationSeconds
+        )
+      )
+    ),
+  ]);
+
+  return {
+    ...props,
+    intro: {
+      ...props.intro,
+      durationSeconds: introSeconds || props.intro?.durationSeconds,
+      audioDurationSeconds: introSeconds || props.intro?.audioDurationSeconds,
+      voiceoverDurationSeconds:
+        introSeconds || props.intro?.voiceoverDurationSeconds,
+    },
+    facts: facts.map((fact, index) => {
+      const seconds = factSeconds[index];
+
+      return {
+        ...fact,
+        durationSeconds: seconds || fact.durationSeconds,
+        audioDurationSeconds: seconds || fact.audioDurationSeconds,
+        voiceoverDurationSeconds:
+          seconds || fact.voiceoverDurationSeconds,
       };
     }),
     outro: {
@@ -219,6 +290,28 @@ export const Root: React.FC = () => {
           };
         }}
         defaultProps={oldtimerShowcaseDefaultProps}
+      />
+
+      <Composition
+        id="ClassicCarFacts"
+        component={ClassicCarFacts}
+        width={1920}
+        height={1080}
+        fps={30}
+        durationInFrames={getClassicCarFactsDurationInFrames(
+          classicCarFactsDefaultProps
+        )}
+        calculateMetadata={async ({ props }) => {
+          const measuredProps = await withMeasuredFactListAudio(props);
+
+          return {
+            durationInFrames: getClassicCarFactsDurationInFrames(
+              measuredProps
+            ),
+            props: measuredProps,
+          };
+        }}
+        defaultProps={classicCarFactsDefaultProps}
       />
 
       <Composition
