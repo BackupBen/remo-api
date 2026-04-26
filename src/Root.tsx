@@ -27,6 +27,15 @@ import type {
   ClassicCarFactsProps,
   FactListItem,
 } from "./templates/ClassicCarFacts";
+import {
+  WatchPsychology,
+  getWatchPsychologyDurationInFrames,
+  watchPsychologyDefaultProps,
+} from "./templates/WatchPsychology";
+import type {
+  WatchPsychologyInsight,
+  WatchPsychologyProps,
+} from "./templates/WatchPsychology";
 
 const getSectionAudioUrl = (section?: {
   voiceoverUrl?: string;
@@ -117,6 +126,68 @@ const withMeasuredFactListAudio = async (
   const introUrl = getSectionAudioUrl(props.intro);
   const outroUrl = getSectionAudioUrl(props.outro);
   const facts = (props.facts || []) as FactListItem[];
+
+  const [introSeconds, outroSeconds, factSeconds] = await Promise.all([
+    measureAudioSeconds(
+      introUrl,
+      props.intro?.audioDurationSeconds ||
+        props.intro?.voiceoverDurationSeconds ||
+        props.intro?.durationSeconds
+    ),
+    measureAudioSeconds(
+      outroUrl,
+      props.outro?.audioDurationSeconds ||
+        props.outro?.voiceoverDurationSeconds ||
+        props.outro?.durationSeconds
+    ),
+    Promise.all(
+      facts.map((fact) =>
+        measureAudioSeconds(
+          getSectionAudioUrl(fact),
+          fact.audioDurationSeconds ||
+            fact.voiceoverDurationSeconds ||
+            fact.durationSeconds
+        )
+      )
+    ),
+  ]);
+
+  return {
+    ...props,
+    intro: {
+      ...props.intro,
+      durationSeconds: introSeconds || props.intro?.durationSeconds,
+      audioDurationSeconds: introSeconds || props.intro?.audioDurationSeconds,
+      voiceoverDurationSeconds:
+        introSeconds || props.intro?.voiceoverDurationSeconds,
+    },
+    facts: facts.map((fact, index) => {
+      const seconds = factSeconds[index];
+
+      return {
+        ...fact,
+        durationSeconds: seconds || fact.durationSeconds,
+        audioDurationSeconds: seconds || fact.audioDurationSeconds,
+        voiceoverDurationSeconds:
+          seconds || fact.voiceoverDurationSeconds,
+      };
+    }),
+    outro: {
+      ...props.outro,
+      durationSeconds: outroSeconds || props.outro?.durationSeconds,
+      audioDurationSeconds: outroSeconds || props.outro?.audioDurationSeconds,
+      voiceoverDurationSeconds:
+        outroSeconds || props.outro?.voiceoverDurationSeconds,
+    },
+  };
+};
+
+const withMeasuredWatchPsychologyAudio = async (
+  props: WatchPsychologyProps
+): Promise<WatchPsychologyProps> => {
+  const introUrl = getSectionAudioUrl(props.intro);
+  const outroUrl = getSectionAudioUrl(props.outro);
+  const facts = (props.facts || []) as WatchPsychologyInsight[];
 
   const [introSeconds, outroSeconds, factSeconds] = await Promise.all([
     measureAudioSeconds(
@@ -312,6 +383,28 @@ export const Root: React.FC = () => {
           };
         }}
         defaultProps={classicCarFactsDefaultProps}
+      />
+
+      <Composition
+        id="WatchPsychology"
+        component={WatchPsychology}
+        width={1920}
+        height={1080}
+        fps={30}
+        durationInFrames={getWatchPsychologyDurationInFrames(
+          watchPsychologyDefaultProps
+        )}
+        calculateMetadata={async ({ props }) => {
+          const measuredProps = await withMeasuredWatchPsychologyAudio(props);
+
+          return {
+            durationInFrames: getWatchPsychologyDurationInFrames(
+              measuredProps
+            ),
+            props: measuredProps,
+          };
+        }}
+        defaultProps={watchPsychologyDefaultProps}
       />
 
       <Composition

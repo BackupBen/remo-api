@@ -12,26 +12,27 @@ import {
   useVideoConfig,
 } from "remotion";
 
-export interface FactListMedia {
+export type WatchPsychologyMedia = {
   mediaType?: "image" | "video";
   mediaUrl?: string | null;
   url?: string | null;
   src?: string | null;
   sourceUrl?: string | null;
   credit?: string | null;
-}
+};
 
-export interface FactVisualBeat {
+export type WatchPsychologyBeat = {
   spokenText?: string;
   mediaSubject?: string;
   mediaQuery?: string;
   mediaQueries?: string[];
+  imagePrompt?: string;
   durationSeconds?: number;
   startRatio?: number;
-  media?: FactListMedia[];
-}
+  media?: WatchPsychologyMedia[];
+};
 
-export interface FactListSection {
+export type WatchPsychologySection = {
   eyebrow?: string;
   title?: string;
   body?: string;
@@ -41,17 +42,17 @@ export interface FactListSection {
   audioDurationSeconds?: number;
   voiceoverUrl?: string;
   audioUrl?: string;
-  media?: FactListMedia[];
-  visualBeats?: FactVisualBeat[];
-}
+  media?: WatchPsychologyMedia[];
+  visualBeats?: WatchPsychologyBeat[];
+};
 
-export interface FactGraphicPoint {
+export type WatchPsychologyGraphicPoint = {
   label?: string;
   value?: number;
   displayValue?: string;
-}
+};
 
-export interface FactGraphicMoment {
+export type WatchPsychologyGraphicMoment = {
   kind?: "stat-badge" | "bar-chart" | "timeline-card";
   startRatio?: number;
   durationSeconds?: number;
@@ -59,37 +60,37 @@ export interface FactGraphicMoment {
   subhead?: string;
   highlight?: string;
   bullets?: string[];
-  dataPoints?: FactGraphicPoint[];
-}
+  dataPoints?: WatchPsychologyGraphicPoint[];
+};
 
-export interface FactListItem extends FactListSection {
+export type WatchPsychologyInsight = WatchPsychologySection & {
   number?: number;
   label?: string;
-  factType?: "surprising" | "engineering" | "culture" | "market";
+  factType?: "status" | "identity" | "scarcity" | "ritual" | "market";
   highlight?: string;
-  graphicMoments?: FactGraphicMoment[];
-}
+  graphicMoments?: WatchPsychologyGraphicMoment[];
+};
 
-export interface ClassicCarFactsProps {
+export type WatchPsychologyProps = {
   title?: string;
   subtitle?: string;
   category?: string;
-  intro?: FactListSection;
-  facts?: FactListItem[];
-  outro?: FactListSection;
+  intro?: WatchPsychologySection;
+  facts?: WatchPsychologyInsight[];
+  outro?: WatchPsychologySection;
   backgroundMusicUrl?: string;
-}
+};
 
-type SectionTiming = {
+type TimelineSection = {
   type: "intro" | "fact" | "outro";
   from: number;
   duration: number;
-  fact?: FactListItem;
+  fact?: WatchPsychologyInsight;
   index?: number;
 };
 
 type ResolvedBeatMedia = {
-  media: FactListMedia;
+  media: WatchPsychologyMedia;
   spokenText?: string;
   mediaQuery?: string;
   durationSeconds?: number;
@@ -99,199 +100,119 @@ type ResolvedBeatMedia = {
 const FPS = 30;
 const MIN_SECTION_FRAMES = 45;
 const DEFAULT_INTRO_SECONDS = 16;
-const DEFAULT_FACT_SECONDS = 16;
+const DEFAULT_FACT_SECONDS = 18;
 const DEFAULT_OUTRO_SECONDS = 12;
-const GOLD = "#d5a33a";
-const RED = "#9f312f";
-const GREEN = "#1e5645";
-const PAPER = "#f1ead9";
-const INK = "#11100e";
 
-const sampleBritishFacts: FactListItem[] = [
+const INK = "#12100e";
+const PAPER = "#f4ecdd";
+const BRASS = "#c9a15a";
+const OXBLOOD = "#6f1f20";
+const OLIVE = "#344034";
+const SMOKE = "#d7c8ae";
+
+const sampleInsights: WatchPsychologyInsight[] = [
   {
     number: 1,
-    title: "British roadsters were engineered for export first",
-    body: "Many compact British sports cars survived because American buyers wanted affordable open-top fun.",
-    label: "Export story",
-    factType: "market",
+    label: "Scarcity loop",
+    factType: "scarcity",
+    title: "Waiting lists turn patience into part of the product",
+    body: "The watch is no longer just an object. The wait becomes a private story about deserving it.",
+    highlight: "Scarcity feels more meaningful when it arrives dressed as recognition.",
   },
   {
     number: 2,
-    title: "Wire wheels often sold the dream more than the performance",
-    body: "They looked expensive and elegant, even when the rest of the car stayed mechanically simple.",
-    label: "Design detail",
-    factType: "culture",
+    label: "Status signal",
+    factType: "status",
+    title: "Quiet watches still communicate loudly to the right people",
+    body: "Most status signaling in watches is not aimed at everyone. It is aimed at the few who know what they are seeing.",
+    highlight: "Luxury often wants selective legibility, not mass approval.",
   },
   {
     number: 3,
-    title: "Lucas electrics became a running joke worldwide",
-    body: "The stereotype stuck so deeply that it became part of classic British car folklore.",
-    label: "Workshop folklore",
-    factType: "culture",
+    label: "Identity story",
+    factType: "identity",
+    title: "Collectors often buy watches for future versions of themselves",
+    body: "A dress watch can stand for discipline, a diver for rugged competence, and a vintage piece for cultivated taste.",
+    highlight: "The purchase is often autobiographical before it is practical.",
   },
   {
     number: 4,
-    title: "A tiny cabin was often a deliberate packaging compromise",
-    body: "Designers kept dimensions tight to save weight, sharpen handling, and reduce manufacturing cost.",
-    label: "Engineering trade-off",
-    factType: "engineering",
+    label: "Ritual comfort",
+    factType: "ritual",
+    title: "Setting and winding a watch can feel calming because it is controllable",
+    body: "The ritual is small, repeatable, and tactile. It creates a pocket of order in a noisy day.",
+    highlight: "Mechanical ritual gives form to attention.",
   },
   {
     number: 5,
-    title: "Overdrive transformed motorway manners",
-    body: "A humble mechanical add-on could make an old British car feel dramatically calmer at speed.",
-    label: "Driving feel",
-    factType: "engineering",
+    label: "Market mirror",
+    factType: "market",
+    title: "Price charts influence desire even when collectors say they do not care",
+    body: "People rarely separate taste from perceived value as cleanly as they think they do.",
+    highlight: "Markets can make emotion feel rational.",
   },
   {
     number: 6,
-    title: "Several famous marques shared parts behind the romance",
-    body: "Switchgear, engines, and suspension pieces often crossed between models to keep costs under control.",
-    label: "Shared hardware",
-    factType: "market",
+    label: "Belonging",
+    factType: "identity",
+    title: "Watch language creates instant in-groups",
+    body: "Reference numbers, dial nicknames, and bracelet debates make strangers feel like insiders with shared codes.",
+    highlight: "Fluency can become a form of social membership.",
   },
   {
     number: 7,
-    title: "British green was never just one color",
-    body: "The racing heritage shade exists in many interpretations, from almost black to bright metallic tones.",
-    label: "Color myth",
-    factType: "culture",
+    label: "Mythmaking",
+    factType: "status",
+    title: "Brand heritage works because it lets buyers borrow significance",
+    body: "A century of stories can make a modern purchase feel connected to craft, adventure, and continuity.",
+    highlight: "People often buy into a timeline, not just a case and movement.",
   },
   {
     number: 8,
-    title: "Wood-rim steering wheels were part theater, part temperature control",
-    body: "They looked premium and could feel friendlier in the hand than bare metal rims.",
-    label: "Cockpit note",
-    factType: "surprising",
-  },
-  {
-    number: 9,
-    title: "A live rear axle stayed longer than many buyers expected",
-    body: "British makers often refined old layouts for years instead of rushing into expensive new hardware.",
-    label: "Old-school engineering",
-    factType: "engineering",
-  },
-  {
-    number: 10,
-    title: "Many classics owed their charm to flexible engines, not huge power",
-    body: "Usable torque and light weight mattered more than headline horsepower on ordinary roads.",
-    label: "Power reality",
-    factType: "surprising",
-  },
-  {
-    number: 11,
-    title: "Some British coupes were basically dressed-up family car platforms",
-    body: "The glamorous body often hid practical roots and surprisingly ordinary mechanical architecture.",
-    label: "Hidden origins",
-    factType: "surprising",
-  },
-  {
-    number: 12,
-    title: "Convertibles sometimes gained reputation from films more than race results",
-    body: "Pop culture could elevate a model’s status far beyond what its numbers suggested.",
-    label: "Screen legend",
-    factType: "culture",
-  },
-  {
-    number: 13,
-    title: "Chrome bumpers became a visual dividing line for collectors",
-    body: "Small regulation changes created entire generations of preference in the classic market.",
-    label: "Collector bias",
-    factType: "market",
-  },
-  {
-    number: 14,
-    title: "Rust, not mileage, often decided survival",
-    body: "A low-mileage British classic could be far worse than a heavily used car stored properly.",
-    label: "Ownership truth",
-    factType: "surprising",
-  },
-  {
-    number: 15,
-    title: "A good gear lever feel became part of the national identity",
-    body: "Even modest cars earned praise when the shift action felt direct, light, and mechanical.",
-    label: "Driver connection",
-    factType: "engineering",
-  },
-  {
-    number: 16,
-    title: "British sports cars helped sell an entire lifestyle abroad",
-    body: "Manufacturers exported weather, freedom, and optimism almost as much as the car itself.",
-    label: "Brand image",
-    factType: "culture",
-  },
-  {
-    number: 17,
-    title: "A badge could change the story of the same basic car",
-    body: "Trim, tuning, and marketing often created separate identities from closely related machines.",
-    label: "Badge engineering",
-    factType: "market",
-  },
-  {
-    number: 18,
-    title: "British classics reward momentum more than brute force",
-    body: "They often feel best when driven fluently rather than aggressively.",
-    label: "Road character",
-    factType: "engineering",
-  },
-  {
-    number: 19,
-    title: "Owners became part-time historians by necessity",
-    body: "Trim codes, production changes, and tiny revisions matter far more than many newcomers expect.",
-    label: "Ownership culture",
-    factType: "culture",
-  },
-  {
-    number: 20,
-    title: "The imperfections are part of the appeal",
-    body: "Classic British cars often win hearts because they feel handmade, human, and faintly stubborn.",
-    label: "Lasting appeal",
-    factType: "surprising",
+    label: "Resolution",
+    factType: "ritual",
+    title: "The best collections often become calmer over time",
+    body: "Early collecting can be driven by novelty. Later collecting is often driven by clarity, editing, and self-understanding.",
+    highlight: "Maturity in collecting usually looks quieter, not louder.",
   },
 ];
 
-export const classicCarFactsDefaultProps: ClassicCarFactsProps = {
-  title: "20 Facts About Classic British Cars You Didn't Know",
-  subtitle: "The myths, engineering quirks, and market stories behind the icons",
-  category: "Classic British Cars",
+export const watchPsychologyDefaultProps: WatchPsychologyProps = {
+  title: "Why Watches Mean More Than Time",
+  subtitle: "Status, ritual, scarcity, and identity in watch collecting",
+  category: "Watch Psychology",
   intro: {
-    eyebrow: "Fact File",
-    title: "Twenty facts that make the legends feel more human",
-    body: "From export strategy to workshop folklore, these details reveal why classic British cars remain so memorable.",
+    eyebrow: "Watch Psychology",
+    title: "What people are really buying when they buy a watch",
+    body: "Beyond steel, gold, and complications sits a deeper story about status, belonging, ritual, and self-image.",
     voiceover:
-      "Classic British cars are full of stories that sit somewhere between engineering, image, and pure character. Here are twenty facts that make the legends feel more human.",
+      "Luxury watches are never only about time. They sit at the intersection of status, ritual, scarcity, and identity, which is exactly why people care so much about them.",
     durationSeconds: 16,
   },
-  facts: sampleBritishFacts,
+  facts: sampleInsights,
   outro: {
     eyebrow: "Closing thought",
-    title: "The surprises are part of the charm",
-    body: "These cars were never only about numbers. Their appeal lives in the details, contradictions, and personalities they carry.",
+    title: "The object matters, but the meaning matters more",
+    body: "The most revealing part of watch culture is often not the watch itself, but the story people build around wearing it.",
     voiceover:
-      "That is the magic of these classics. The facts only make them more interesting, because the charm was never about perfection alone.",
+      "That is what makes watch collecting so psychologically rich. The object matters, but the meaning people attach to it matters even more.",
     durationSeconds: 12,
   },
 };
 
-const clamp = (value: number, min: number, max: number) => {
-  return Math.min(max, Math.max(min, value));
-};
+const clamp = (value: number, min: number, max: number) =>
+  Math.min(max, Math.max(min, value));
 
-const secondsToFrames = (seconds: number | undefined, fps: number) => {
-  return Math.max(MIN_SECTION_FRAMES, Math.round((seconds || 0) * fps));
-};
+const secondsToFrames = (seconds: number | undefined, fps: number) =>
+  Math.max(MIN_SECTION_FRAMES, Math.round((seconds || 0) * fps));
 
 const cleanText = (value: unknown, fallback = "") => {
-  if (typeof value !== "string") {
-    return fallback;
-  }
+  if (typeof value !== "string") return fallback;
   return value.trim() || fallback;
 };
 
 const truncate = (value: string, maxLength: number) => {
-  if (value.length <= maxLength) {
-    return value;
-  }
+  if (value.length <= maxLength) return value;
   return `${value.slice(0, maxLength - 1).trim()}...`;
 };
 
@@ -306,57 +227,44 @@ const splitLines = (value: string, maxCharsPerLine: number, maxLines: number) =>
       current = next;
       return;
     }
-
-    if (current) {
-      lines.push(current);
-    }
+    if (current) lines.push(current);
     current = word;
   });
 
-  if (current) {
-    lines.push(current);
-  }
-
+  if (current) lines.push(current);
   const clipped = lines.slice(0, maxLines);
   if (lines.length > maxLines && clipped.length > 0) {
-    clipped[clipped.length - 1] = `${truncate(clipped[clipped.length - 1], Math.max(12, maxCharsPerLine - 4)).replace(/\.\.\.$/, "")}...`;
+    clipped[clipped.length - 1] = `${truncate(
+      clipped[clipped.length - 1],
+      Math.max(12, maxCharsPerLine - 4)
+    ).replace(/\.\.\.$/, "")}...`;
   }
-
   return clipped.length > 0 ? clipped : [""];
 };
 
-const compactFactText = (value: string, maxLength = 56) => {
-  return truncate(
+const compactText = (value: string, maxLength = 56) =>
+  truncate(
     value
       .replace(/\s+/g, " ")
       .replace(/\.$/, "")
       .trim(),
     maxLength
   );
-};
 
-const getMediaUrl = (media?: FactListMedia | null) => {
-  return media?.mediaUrl || media?.url || media?.src || "";
-};
+const getMediaUrl = (media?: WatchPsychologyMedia | null) =>
+  media?.mediaUrl || media?.url || media?.src || "";
 
-const getAudioUrl = (section?: {
-  voiceoverUrl?: string;
-  audioUrl?: string;
-}) => {
-  return section?.voiceoverUrl || section?.audioUrl || "";
-};
+const getAudioUrl = (section?: { voiceoverUrl?: string; audioUrl?: string }) =>
+  section?.voiceoverUrl || section?.audioUrl || "";
 
 const getSectionSeconds = (section?: {
   durationSeconds?: number;
   voiceoverDurationSeconds?: number;
   audioDurationSeconds?: number;
-}) => {
-  return (
-    section?.audioDurationSeconds ||
-    section?.voiceoverDurationSeconds ||
-    section?.durationSeconds
-  );
-};
+}) =>
+  section?.audioDurationSeconds ||
+  section?.voiceoverDurationSeconds ||
+  section?.durationSeconds;
 
 const getOverlayOpacity = (
   frame: number,
@@ -367,18 +275,17 @@ const getOverlayOpacity = (
   const end = Math.max(1, Math.min(duration, visibleFrames));
   const fade = Math.max(1, Math.min(fadeFrames, Math.floor(end / 3)));
   const holdEnd = Math.max(fade, end - fade);
-
   return interpolate(frame, [0, fade, holdEnd, end], [0, 1, 1, 0], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
 };
 
-const buildFactTimeline = (props: ClassicCarFactsProps, fps = FPS) => {
+const buildTimeline = (props: WatchPsychologyProps, fps = FPS) => {
   const facts = (props.facts && props.facts.length > 0
     ? props.facts
-    : classicCarFactsDefaultProps.facts || []) as FactListItem[];
-  const sections: SectionTiming[] = [];
+    : watchPsychologyDefaultProps.facts || []) as WatchPsychologyInsight[];
+  const sections: TimelineSection[] = [];
   let cursor = 0;
 
   const introDuration = secondsToFrames(
@@ -393,13 +300,7 @@ const buildFactTimeline = (props: ClassicCarFactsProps, fps = FPS) => {
       getSectionSeconds(fact) || DEFAULT_FACT_SECONDS,
       fps
     );
-    sections.push({
-      type: "fact",
-      from: cursor,
-      duration: factDuration,
-      fact,
-      index,
-    });
+    sections.push({ type: "fact", from: cursor, duration: factDuration, fact, index });
     cursor += factDuration;
   });
 
@@ -410,23 +311,51 @@ const buildFactTimeline = (props: ClassicCarFactsProps, fps = FPS) => {
   sections.push({ type: "outro", from: cursor, duration: outroDuration });
   cursor += outroDuration;
 
-  return {
-    facts,
-    sections,
-    totalFrames: Math.max(cursor, MIN_SECTION_FRAMES),
-  };
+  return { facts, sections, totalFrames: Math.max(cursor, MIN_SECTION_FRAMES) };
 };
 
-export const getClassicCarFactsDurationInFrames = (
-  props: ClassicCarFactsProps,
+export const getWatchPsychologyDurationInFrames = (
+  props: WatchPsychologyProps,
   fps = FPS
-) => {
-  return buildFactTimeline(props, fps).totalFrames;
+) => buildTimeline(props, fps).totalFrames;
+
+const getMediaItems = (section?: WatchPsychologySection | WatchPsychologyInsight) => {
+  const seen = new Set<string>();
+  const items: WatchPsychologyMedia[] = [];
+  (section?.media || []).forEach((media) => {
+    const url = getMediaUrl(media);
+    if (!url || seen.has(url)) return;
+    seen.add(url);
+    items.push({ mediaType: media.mediaType || "image", ...media, mediaUrl: url });
+  });
+  return items.slice(0, 10);
 };
 
-const getFactGraphicMoments = (fact: FactListItem): FactGraphicMoment[] => {
+const getBeatMediaItems = (beats?: WatchPsychologyBeat[]) => {
+  const items: ResolvedBeatMedia[] = [];
+  (beats || []).forEach((beat) => {
+    const media = getMediaItems({ media: beat.media || [] });
+    const primary = media[0];
+    if (!primary) return;
+    items.push({
+      media: primary,
+      spokenText: cleanText(beat.spokenText, ""),
+      mediaQuery: cleanText(beat.mediaQuery || beat.imagePrompt, ""),
+      durationSeconds: Number(beat.durationSeconds || 0) || undefined,
+      startRatio: Number(beat.startRatio || 0) || undefined,
+    });
+  });
+  return items;
+};
+
+const getGraphicMoments = (
+  fact: WatchPsychologyInsight
+): WatchPsychologyGraphicMoment[] => {
   const provided = (fact.graphicMoments || [])
-    .filter((moment) => moment && (moment.headline || moment.highlight || moment.dataPoints?.length || moment.bullets?.length))
+    .filter(
+      (moment) =>
+        moment && (moment.headline || moment.highlight || moment.dataPoints?.length || moment.bullets?.length)
+    )
     .map((moment) => ({
       kind: moment.kind || "stat-badge",
       startRatio: clamp(moment.startRatio ?? 0.42, 0.16, 0.78),
@@ -434,42 +363,40 @@ const getFactGraphicMoments = (fact: FactListItem): FactGraphicMoment[] => {
       ...moment,
     }));
 
-  if (provided.length > 0) {
-    return provided.slice(0, 1);
-  }
+  if (provided.length > 0) return provided.slice(0, 1);
 
-  const title = cleanText(fact.title, "Interesting classic car fact");
-  const label = cleanText(fact.label, "fact");
+  const label = cleanText(fact.label, "Psychology lens");
+  const title = cleanText(fact.title, "Watch culture insight");
 
-  if (fact.factType === "engineering") {
+  if (fact.factType === "scarcity") {
     return [
       {
-        kind: "timeline-card",
+        kind: "bar-chart",
         startRatio: 0.46,
-        durationSeconds: 4.6,
-        headline: "Engineering angle",
+        durationSeconds: 4.8,
+        headline: "Perceived value rises when access narrows",
         subhead: label,
-        bullets: [
-          compactFactText(title, 34),
-          compactFactText(fact.body || "", 40),
-          compactFactText(fact.highlight || "A small detail that changed the driving feel", 36),
+        dataPoints: [
+          { label: "urgency", value: 92, displayValue: "high" },
+          { label: "status", value: 81, displayValue: "strong" },
+          { label: "clarity", value: 37, displayValue: "mixed" },
         ],
       },
     ];
   }
 
-  if (fact.factType === "market") {
+  if (fact.factType === "ritual") {
     return [
       {
-        kind: "bar-chart",
+        kind: "timeline-card",
         startRatio: 0.44,
-        durationSeconds: 4.8,
-        headline: "Market signal",
+        durationSeconds: 4.6,
+        headline: "Why ritual feels satisfying",
         subhead: label,
-        dataPoints: [
-          { label: "appeal", value: 88, displayValue: "high" },
-          { label: "rarity", value: 54, displayValue: "mid" },
-          { label: "impact", value: 74, displayValue: "strong" },
+        bullets: [
+          compactText("Repeatable physical action calms attention", 38),
+          compactText(title, 44),
+          compactText(fact.highlight || fact.body || "Small rituals create emotional order", 42),
         ],
       },
     ];
@@ -482,7 +409,10 @@ const getFactGraphicMoments = (fact: FactListItem): FactGraphicMoment[] => {
       durationSeconds: 4.4,
       headline: label,
       subhead: title,
-      highlight: compactFactText(fact.highlight || fact.body || "A small detail that says a lot", 62),
+      highlight: compactText(
+        fact.highlight || fact.body || "The most revealing part is often the meaning, not the mechanism.",
+        70
+      ),
     },
   ];
 };
@@ -491,18 +421,19 @@ const FilmTexture: React.FC = () => (
   <AbsoluteFill
     style={{
       backgroundImage:
-        "linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px), repeating-linear-gradient(0deg, rgba(255,255,255,0.02) 0px, rgba(255,255,255,0.02) 1px, transparent 1px, transparent 9px)",
-      backgroundSize: "132px 100%, 100% 9px",
-      opacity: 0.28,
+        "linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px), repeating-linear-gradient(0deg, rgba(255,255,255,0.016) 0px, rgba(255,255,255,0.016) 1px, transparent 1px, transparent 8px)",
+      backgroundSize: "128px 100%, 100% 8px",
+      opacity: 0.3,
+      mixBlendMode: "screen",
     }}
   />
 );
 
-const BaseBackground: React.FC<{ accent?: string }> = ({ accent = GOLD }) => (
+const BaseBackground: React.FC<{ accent?: string }> = ({ accent = BRASS }) => (
   <AbsoluteFill
     style={{
       backgroundColor: INK,
-      backgroundImage: `linear-gradient(140deg, rgba(30,86,69,0.72), rgba(17,16,14,0.95) 44%, rgba(159,49,47,0.24)), linear-gradient(90deg, ${accent} 0 8px, transparent 8px 100%)`,
+      backgroundImage: `radial-gradient(circle at 18% 16%, rgba(255,255,255,0.06), transparent 0 28%), linear-gradient(140deg, rgba(52,64,52,0.48), rgba(18,16,14,0.96) 44%, rgba(111,31,32,0.24)), linear-gradient(90deg, ${accent} 0 6px, transparent 6px 100%)`,
     }}
   >
     <FilmTexture />
@@ -520,79 +451,29 @@ const FadeWrap: React.FC<{ duration: number; children: React.ReactNode }> = ({
     [1, 1, 0],
     { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
   );
-
   return <AbsoluteFill style={{ opacity }}>{children}</AbsoluteFill>;
 };
 
-const getMediaItems = (section?: FactListSection | FactListItem) => {
-  const seen = new Set<string>();
-  const items: FactListMedia[] = [];
-
-  (section?.media || []).forEach((media) => {
-    const url = getMediaUrl(media);
-    if (!url || seen.has(url)) {
-      return;
-    }
-    seen.add(url);
-    items.push({
-      mediaType: media.mediaType || "image",
-      ...media,
-      mediaUrl: url,
-    });
-  });
-
-  return items.slice(0, 6);
-};
-
-const getBeatMediaItems = (beats?: FactVisualBeat[]) => {
-  const items: ResolvedBeatMedia[] = [];
-
-  (beats || []).forEach((beat) => {
-    const media = getMediaItems({ media: beat.media || [] });
-    const primary = media[0];
-    if (!primary) {
-      return;
-    }
-
-    items.push({
-      media: primary,
-      spokenText: cleanText(beat.spokenText, ""),
-      mediaQuery: cleanText(beat.mediaQuery, ""),
-      durationSeconds: Number(beat.durationSeconds || 0) || undefined,
-      startRatio: Number(beat.startRatio || 0) || undefined,
-    });
-  });
-
-  return items;
-};
-
 const MediaLayer: React.FC<{
-  media: FactListMedia[];
-  visualBeats?: FactVisualBeat[];
+  media: WatchPsychologyMedia[];
+  visualBeats?: WatchPsychologyBeat[];
   duration: number;
   ghostNumber?: string;
 }> = ({ media, visualBeats, duration, ghostNumber }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const beatItems = getBeatMediaItems(visualBeats);
-  const renderItems = beatItems.length > 0
-    ? beatItems.map((item) => item.media)
-    : media;
+  const renderItems = beatItems.length > 0 ? beatItems.map((item) => item.media) : media;
 
   if (renderItems.length === 0) {
     return (
-      <AbsoluteFill
-        style={{
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
+      <AbsoluteFill style={{ alignItems: "center", justifyContent: "center" }}>
         {ghostNumber ? (
           <div
             style={{
-              color: "rgba(242,234,216,0.14)",
+              color: "rgba(244,236,221,0.12)",
               fontFamily: "Georgia, Times New Roman, serif",
-              fontSize: 240,
+              fontSize: 230,
               fontWeight: 700,
               lineHeight: 1,
             }}
@@ -603,7 +484,7 @@ const MediaLayer: React.FC<{
         <AbsoluteFill
           style={{
             background:
-              "radial-gradient(circle at 68% 40%, rgba(213,163,58,0.14), transparent 0 20%, rgba(17,16,14,0.95) 46%)",
+              "radial-gradient(circle at 70% 42%, rgba(201,161,90,0.16), transparent 0 20%, rgba(18,16,14,0.95) 46%)",
           }}
         />
       </AbsoluteFill>
@@ -630,9 +511,7 @@ const MediaLayer: React.FC<{
 
     let used = 0;
     return spans.map((span, index) => {
-      if (index === spans.length - 1) {
-        return Math.max(1, duration - used);
-      }
+      if (index === spans.length - 1) return Math.max(1, duration - used);
       const remainingSlots = spans.length - index - 1;
       const maxAllowed = Math.max(1, duration - used - remainingSlots);
       const safeSpan = Math.max(1, Math.min(span, maxAllowed));
@@ -669,13 +548,13 @@ const MediaLayer: React.FC<{
           [0, 1, 1, 0],
           { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
         );
-        const scale = interpolate(localFrame, [0, span], [1.03, 1.1], {
+        const scale = interpolate(localFrame, [0, span], [1.02, 1.08], {
           extrapolateRight: "clamp",
         });
-        const drift = interpolate(localFrame, [0, span], [-18, 18], {
+        const drift = interpolate(localFrame, [0, span], [-14, 14], {
           extrapolateRight: "clamp",
         });
-        const transform = `scale(${scale}) translate(${index % 2 === 0 ? drift : -drift}px, ${index % 3 === 0 ? drift * 0.35 : 0}px)`;
+        const transform = `scale(${scale}) translate(${index % 2 === 0 ? drift : -drift}px, ${index % 3 === 0 ? drift * 0.3 : 0}px)`;
 
         return (
           <AbsoluteFill key={`${getMediaUrl(item)}-${index}`} style={{ opacity }}>
@@ -687,7 +566,7 @@ const MediaLayer: React.FC<{
                   width: "100%",
                   height: "100%",
                   objectFit: "cover",
-                  filter: "contrast(1.08) saturate(0.9) brightness(0.92)",
+                  filter: "contrast(1.04) saturate(0.78) brightness(0.94)",
                   transform,
                 }}
               />
@@ -698,7 +577,7 @@ const MediaLayer: React.FC<{
                   width: "100%",
                   height: "100%",
                   objectFit: "cover",
-                  filter: "sepia(0.18) contrast(1.08) saturate(0.82) brightness(0.94)",
+                  filter: "sepia(0.12) contrast(1.08) saturate(0.84) brightness(0.96)",
                   transform,
                 }}
               />
@@ -710,15 +589,15 @@ const MediaLayer: React.FC<{
       <AbsoluteFill
         style={{
           background:
-            "linear-gradient(0deg, rgba(17,16,14,0.78) 0%, rgba(17,16,14,0.28) 38%, rgba(17,16,14,0.42) 100%)",
+            "linear-gradient(0deg, rgba(18,16,14,0.82) 0%, rgba(18,16,14,0.34) 38%, rgba(18,16,14,0.48) 100%)",
         }}
       />
     </AbsoluteFill>
   );
 };
 
-const FactGraphicCard: React.FC<{
-  moment: FactGraphicMoment;
+const GraphicCard: React.FC<{
+  moment: WatchPsychologyGraphicMoment;
   frame: number;
   start: number;
   duration: number;
@@ -743,18 +622,21 @@ const FactGraphicCard: React.FC<{
     }
   );
   const opacity = enter * (1 - exit);
-  const slide = interpolate(enter, [0, 1], [28, 0], {
+  const slide = interpolate(enter, [0, 1], [24, 0], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
-  const scale = interpolate(enter, [0, 1], [0.96, 1], {
+  const scale = interpolate(enter, [0, 1], [0.965, 1], {
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
   const kind = moment.kind || "stat-badge";
-  const headline = cleanText(moment.headline, "Quick note");
+  const headline = cleanText(moment.headline, "Psychology lens");
   const subhead = cleanText(moment.subhead, "");
-  const bullets = (moment.bullets || []).map((bullet) => cleanText(bullet)).filter(Boolean).slice(0, 3);
+  const bullets = (moment.bullets || [])
+    .map((bullet) => cleanText(bullet))
+    .filter(Boolean)
+    .slice(0, 3);
   const points = (moment.dataPoints || [])
     .map((point) => ({
       label: cleanText(point.label, "item"),
@@ -764,16 +646,14 @@ const FactGraphicCard: React.FC<{
     .filter((point) => point.label)
     .slice(0, 4);
 
-  if (opacity <= 0.001) {
-    return null;
-  }
+  if (opacity <= 0.001) return null;
 
   return (
     <AbsoluteFill
       style={{
         alignItems: "flex-end",
         justifyContent: "flex-start",
-        paddingTop: 168,
+        paddingTop: 154,
         paddingRight: 82,
         pointerEvents: "none",
         opacity,
@@ -781,35 +661,35 @@ const FactGraphicCard: React.FC<{
     >
       <div
         style={{
-          width: 470,
-          backgroundColor: "rgba(17,16,14,0.7)",
-          border: `2px solid ${GOLD}`,
+          width: 460,
+          backgroundColor: "rgba(18,16,14,0.72)",
+          border: `2px solid ${BRASS}`,
           borderRadius: 18,
-          padding: "24px 26px 24px 26px",
-          boxShadow: "0 24px 58px rgba(0,0,0,0.4)",
+          padding: "22px 24px",
+          boxShadow: "0 22px 54px rgba(0,0,0,0.4)",
           transform: `translateY(${slide}px) scale(${scale})`,
           backdropFilter: "blur(10px)",
         }}
       >
         <div
           style={{
-            color: GOLD,
+            color: BRASS,
             fontSize: 18,
             fontWeight: 800,
             textTransform: "uppercase",
           }}
         >
           {kind === "bar-chart"
-            ? "Graphic comparison"
+            ? "Behavior pattern"
             : kind === "timeline-card"
-              ? "Timeline note"
-              : "Graphic callout"}
+              ? "Emotional sequence"
+              : "Psychology cue"}
         </div>
         <div
           style={{
             color: PAPER,
             fontFamily: "Georgia, Times New Roman, serif",
-            fontSize: 36,
+            fontSize: 34,
             lineHeight: 1.08,
             marginTop: 14,
           }}
@@ -819,7 +699,7 @@ const FactGraphicCard: React.FC<{
         {subhead ? (
           <div
             style={{
-              color: "rgba(241,234,217,0.74)",
+              color: "rgba(244,236,221,0.72)",
               fontSize: 18,
               lineHeight: 1.3,
               marginTop: 10,
@@ -831,14 +711,13 @@ const FactGraphicCard: React.FC<{
         ) : null}
         <div
           style={{
-            width: 140,
+            width: 138,
             height: 4,
-            backgroundColor: RED,
+            backgroundColor: OXBLOOD,
             marginTop: 18,
             marginBottom: 18,
           }}
         />
-
         {kind === "bar-chart" ? (
           <div style={{ display: "grid", gap: 14 }}>
             {points.map((point, index) => (
@@ -848,20 +727,20 @@ const FactGraphicCard: React.FC<{
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "space-between",
-                    color: "rgba(241,234,217,0.84)",
+                    color: "rgba(244,236,221,0.84)",
                     fontSize: 17,
                     fontWeight: 700,
                     marginBottom: 7,
                   }}
                 >
-                  <span>{truncate(point.label, 20)}</span>
+                  <span>{truncate(point.label, 22)}</span>
                   <span>{point.displayValue || `${Math.round(point.value)}`}</span>
                 </div>
                 <div
                   style={{
                     height: 10,
                     borderRadius: 999,
-                    backgroundColor: "rgba(241,234,217,0.12)",
+                    backgroundColor: "rgba(244,236,221,0.12)",
                     overflow: "hidden",
                   }}
                 >
@@ -872,8 +751,8 @@ const FactGraphicCard: React.FC<{
                       borderRadius: 999,
                       background:
                         index % 2 === 0
-                          ? `linear-gradient(90deg, ${GOLD}, ${RED})`
-                          : `linear-gradient(90deg, ${GREEN}, ${GOLD})`,
+                          ? `linear-gradient(90deg, ${BRASS}, ${OXBLOOD})`
+                          : `linear-gradient(90deg, ${OLIVE}, ${BRASS})`,
                     }}
                   />
                 </div>
@@ -881,7 +760,6 @@ const FactGraphicCard: React.FC<{
             ))}
           </div>
         ) : null}
-
         {kind === "timeline-card" ? (
           <div style={{ display: "grid", gap: 14 }}>
             {bullets.map((bullet, index) => (
@@ -899,14 +777,14 @@ const FactGraphicCard: React.FC<{
                     width: 12,
                     height: 12,
                     borderRadius: "50%",
-                    backgroundColor: index === 1 ? RED : GOLD,
+                    backgroundColor: index === 1 ? OXBLOOD : BRASS,
                     marginTop: 6,
-                    boxShadow: "0 0 0 5px rgba(241,234,217,0.08)",
+                    boxShadow: "0 0 0 5px rgba(244,236,221,0.08)",
                   }}
                 />
                 <div
                   style={{
-                    color: "rgba(241,234,217,0.88)",
+                    color: "rgba(244,236,221,0.88)",
                     fontSize: 22,
                     lineHeight: 1.28,
                     fontWeight: 700,
@@ -918,30 +796,30 @@ const FactGraphicCard: React.FC<{
             ))}
           </div>
         ) : null}
-
         {kind === "stat-badge" ? (
-          <div
-            style={{
-              display: "grid",
-              gap: 12,
-            }}
-          >
+          <div style={{ display: "grid", gap: 12 }}>
             <div
               style={{
                 color: PAPER,
-                fontSize: 28,
-                lineHeight: 1.28,
+                fontSize: 27,
+                lineHeight: 1.26,
                 fontWeight: 700,
               }}
             >
-              {truncate(cleanText(moment.highlight, "Small details often reshape how we remember a car."), 118)}
+              {truncate(
+                cleanText(
+                  moment.highlight,
+                  "The strongest signal is often emotional, not technical."
+                ),
+                118
+              )}
             </div>
             <div
               style={{
                 display: "inline-flex",
                 alignItems: "center",
                 gap: 10,
-                color: GOLD,
+                color: BRASS,
                 fontSize: 15,
                 fontWeight: 800,
                 textTransform: "uppercase",
@@ -952,10 +830,10 @@ const FactGraphicCard: React.FC<{
                   width: 10,
                   height: 10,
                   borderRadius: "50%",
-                  backgroundColor: RED,
+                  backgroundColor: OXBLOOD,
                 }}
               />
-              Fact overlay
+              Insight overlay
             </div>
           </div>
         ) : null}
@@ -964,28 +842,25 @@ const FactGraphicCard: React.FC<{
   );
 };
 
-const FactGraphicLayer: React.FC<{
-  fact: FactListItem;
+const GraphicLayer: React.FC<{
+  fact: WatchPsychologyInsight;
   duration: number;
 }> = ({ fact, duration }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
-  const moments = getFactGraphicMoments(fact);
+  const moments = getGraphicMoments(fact);
 
   return (
     <>
       {moments.map((moment, index) => {
-        const momentFrames = Math.max(
-          fps * 3,
-          Math.round((moment.durationSeconds || 4.8) * fps)
-        );
+        const momentFrames = Math.max(fps * 3, Math.round((moment.durationSeconds || 4.8) * fps));
         const start = Math.min(
           Math.max(fps * 5, Math.round(duration * clamp(moment.startRatio ?? 0.42, 0.14, 0.8))),
           Math.max(0, duration - momentFrames - fps)
         );
 
         return (
-          <FactGraphicCard
+          <GraphicCard
             key={`${moment.headline || "graphic"}-${index}`}
             moment={moment}
             frame={frame}
@@ -998,12 +873,11 @@ const FactGraphicLayer: React.FC<{
   );
 };
 
-const ProgressRail: React.FC<{
-  total: number;
-  activeIndex: number;
-}> = ({ total, activeIndex }) => {
-  const displayCount = Math.max(1, Math.min(total, 20));
-
+const ProgressRail: React.FC<{ total: number; activeIndex: number }> = ({
+  total,
+  activeIndex,
+}) => {
+  const displayCount = Math.max(1, Math.min(total, 16));
   return (
     <div
       style={{
@@ -1021,12 +895,12 @@ const ProgressRail: React.FC<{
             borderRadius: 999,
             backgroundColor:
               index < activeIndex
-                ? GOLD
+                ? BRASS
                 : index === activeIndex
-                  ? RED
-                  : "rgba(241,234,217,0.14)",
+                  ? OXBLOOD
+                  : "rgba(244,236,221,0.14)",
             boxShadow:
-              index === activeIndex ? "0 0 18px rgba(159,49,47,0.45)" : "none",
+              index === activeIndex ? "0 0 18px rgba(111,31,32,0.45)" : "none",
           }}
         />
       ))}
@@ -1035,23 +909,23 @@ const ProgressRail: React.FC<{
 };
 
 const IntroScene: React.FC<{
-  props: ClassicCarFactsProps;
+  props: WatchPsychologyProps;
   duration: number;
   totalFacts: number;
 }> = ({ props, duration, totalFacts }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const audioUrl = getAudioUrl(props.intro);
-  const title = cleanText(props.title, classicCarFactsDefaultProps.title);
-  const subtitle = cleanText(props.subtitle, classicCarFactsDefaultProps.subtitle);
-  const eyebrow = cleanText(props.intro?.eyebrow, "Fact File");
+  const title = cleanText(props.title, watchPsychologyDefaultProps.title);
+  const subtitle = cleanText(props.subtitle, watchPsychologyDefaultProps.subtitle);
+  const eyebrow = cleanText(props.intro?.eyebrow, "Watch Psychology");
   const cardIn = spring({
     frame,
     fps,
     config: { stiffness: 70, damping: 18 },
   });
   const overlayOpacity = getOverlayOpacity(frame, duration, fps * 7, 16);
-  const lineWidth = interpolate(frame, [14, 62], [0, 440], {
+  const lineWidth = interpolate(frame, [14, 62], [0, 460], {
     easing: Easing.bezier(0.16, 1, 0.3, 1),
     extrapolateRight: "clamp",
   });
@@ -1060,11 +934,7 @@ const IntroScene: React.FC<{
   return (
     <FadeWrap duration={duration}>
       <BaseBackground />
-      <MediaLayer
-        media={media}
-        visualBeats={props.intro?.visualBeats}
-        duration={duration}
-      />
+      <MediaLayer media={media} visualBeats={props.intro?.visualBeats} duration={duration} />
       {audioUrl ? <Audio src={audioUrl} /> : null}
       <AbsoluteFill
         style={{
@@ -1076,21 +946,22 @@ const IntroScene: React.FC<{
       >
         <div
           style={{
-            width: 950,
-            backgroundColor: "rgba(17,16,14,0.54)",
-            border: `2px solid ${GOLD}`,
+            width: 980,
+            backgroundColor: "rgba(18,16,14,0.58)",
+            border: `2px solid ${BRASS}`,
             borderRadius: 18,
-            padding: "34px 38px 32px 38px",
-            boxShadow: "0 22px 56px rgba(0,0,0,0.4)",
+            padding: "34px 38px 34px 38px",
+            boxShadow: "0 22px 56px rgba(0,0,0,0.42)",
             transform: `translateY(${(1 - cardIn) * 34}px) scale(${0.97 + cardIn * 0.03})`,
           }}
         >
           <div
             style={{
-              color: GOLD,
+              color: BRASS,
               fontSize: 24,
               fontWeight: 800,
               textTransform: "uppercase",
+              letterSpacing: 0.4,
             }}
           >
             {eyebrow}
@@ -1099,32 +970,33 @@ const IntroScene: React.FC<{
             style={{
               color: PAPER,
               fontFamily: "Georgia, Times New Roman, serif",
-              fontSize: 78,
+              fontSize: 76,
               lineHeight: 1.04,
               marginTop: 18,
+              maxWidth: 830,
             }}
           >
-            {truncate(title, 72)}
+            {truncate(title, 74)}
           </div>
           <div
             style={{
               width: lineWidth,
               height: 5,
-              backgroundColor: RED,
+              backgroundColor: OXBLOOD,
               marginTop: 28,
               marginBottom: 24,
             }}
           />
           <div
             style={{
-              color: "rgba(241,234,217,0.88)",
+              color: "rgba(244,236,221,0.88)",
               fontSize: 30,
               lineHeight: 1.35,
               fontWeight: 600,
-              maxWidth: 760,
+              maxWidth: 780,
             }}
           >
-            {truncate(subtitle, 120)}
+            {truncate(subtitle, 126)}
           </div>
           <div
             style={{
@@ -1137,12 +1009,12 @@ const IntroScene: React.FC<{
           >
             <div
               style={{
-                color: "rgba(241,234,217,0.62)",
-                fontSize: 22,
+                color: "rgba(244,236,221,0.62)",
+                fontSize: 21,
                 fontWeight: 700,
               }}
             >
-              {totalFacts} facts / documentary list format
+              {totalFacts} insight chapters / editorial essay format
             </div>
             <ProgressRail total={totalFacts} activeIndex={0} />
           </div>
@@ -1152,8 +1024,8 @@ const IntroScene: React.FC<{
   );
 };
 
-const FactScene: React.FC<{
-  fact: FactListItem;
+const InsightScene: React.FC<{
+  fact: WatchPsychologyInsight;
   index: number;
   total: number;
   duration: number;
@@ -1170,24 +1042,19 @@ const FactScene: React.FC<{
     extrapolateRight: "clamp",
   });
   const glow = 0.82 + Math.sin(frame * 0.05) * 0.05;
-  const label = cleanText(fact.label, fact.factType ? `${fact.factType} fact` : "surprising fact");
-  const titleLines = splitLines(cleanText(fact.title, "Interesting classic car fact"), 28, 2);
+  const label = cleanText(fact.label, fact.factType ? `${fact.factType} insight` : "watch culture insight");
+  const titleLines = splitLines(cleanText(fact.title, "Watch psychology insight"), 28, 2);
   const bodyLines = splitLines(cleanText(fact.body, ""), 52, 5);
   const highlight = cleanText(fact.highlight, "");
   const number = String(fact.number || index + 1).padStart(2, "0");
-  const titleSize = titleLines.length > 1 ? 50 : 58;
+  const titleSize = titleLines.length > 1 ? 48 : 56;
 
   return (
     <FadeWrap duration={duration}>
-      <BaseBackground accent={index % 2 === 0 ? GOLD : GREEN} />
-      <MediaLayer
-        media={media}
-        visualBeats={fact.visualBeats}
-        duration={duration}
-        ghostNumber={number}
-      />
+      <BaseBackground accent={index % 2 === 0 ? BRASS : OLIVE} />
+      <MediaLayer media={media} visualBeats={fact.visualBeats} duration={duration} ghostNumber={number} />
       {audioUrl ? <Audio src={audioUrl} /> : null}
-      <FactGraphicLayer fact={fact} duration={duration} />
+      <GraphicLayer fact={fact} duration={duration} />
 
       <AbsoluteFill
         style={{
@@ -1204,25 +1071,19 @@ const FactScene: React.FC<{
             justifyContent: "space-between",
           }}
         >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 16,
-            }}
-          >
+          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
             <div
               style={{
-                width: 84,
-                height: 84,
+                width: 82,
+                height: 82,
                 borderRadius: "50%",
-                background: `radial-gradient(circle at 35% 35%, rgba(241,234,217,${0.24 * glow}), ${RED})`,
+                background: `radial-gradient(circle at 35% 35%, rgba(244,236,221,${0.22 * glow}), ${OXBLOOD})`,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 color: PAPER,
                 fontFamily: "Georgia, Times New Roman, serif",
-                fontSize: 40,
+                fontSize: 38,
                 fontWeight: 700,
                 boxShadow: "0 12px 28px rgba(0,0,0,0.34)",
               }}
@@ -1232,23 +1093,23 @@ const FactScene: React.FC<{
             <div>
               <div
                 style={{
-                  color: GOLD,
+                  color: BRASS,
                   fontSize: 20,
                   fontWeight: 800,
                   textTransform: "uppercase",
                 }}
               >
-                {truncate(label, 24)}
+                {truncate(label, 26)}
               </div>
               <div
                 style={{
-                  color: "rgba(241,234,217,0.68)",
+                  color: "rgba(244,236,221,0.66)",
                   fontSize: 20,
                   fontWeight: 700,
                   marginTop: 6,
                 }}
               >
-                {number} / {String(total).padStart(2, "0")} / {cleanText(category, "Classic Cars")}
+                {number} / {String(total).padStart(2, "0")} / {cleanText(category, "Watch Psychology")}
               </div>
             </div>
           </div>
@@ -1261,17 +1122,17 @@ const FactScene: React.FC<{
             display: "flex",
             alignItems: "flex-end",
             justifyContent: "space-between",
-            gap: 48,
+            gap: 46,
           }}
         >
           <div
             style={{
               width: 980,
-              backgroundColor: "rgba(17,16,14,0.56)",
-              border: `2px solid ${GOLD}`,
+              backgroundColor: "rgba(18,16,14,0.58)",
+              border: `2px solid ${BRASS}`,
               borderRadius: 20,
               padding: "34px 38px 30px 38px",
-              boxShadow: "0 24px 58px rgba(0,0,0,0.42)",
+              boxShadow: "0 24px 58px rgba(0,0,0,0.44)",
               transform: `translateY(${(1 - cardEnter) * 24}px) scale(${0.975 + cardEnter * 0.025})`,
             }}
           >
@@ -1292,14 +1153,14 @@ const FactScene: React.FC<{
               style={{
                 width: 360,
                 height: 5,
-                backgroundColor: RED,
+                backgroundColor: OXBLOOD,
                 marginTop: 24,
                 marginBottom: 24,
               }}
             />
             <div
               style={{
-                color: "rgba(241,234,217,0.9)",
+                color: "rgba(244,236,221,0.9)",
                 fontSize: 28,
                 lineHeight: 1.34,
                 fontWeight: 600,
@@ -1316,8 +1177,8 @@ const FactScene: React.FC<{
             <div
               style={{
                 width: 360,
-                backgroundColor: "rgba(17,16,14,0.44)",
-                border: "1px solid rgba(241,234,217,0.2)",
+                backgroundColor: "rgba(18,16,14,0.46)",
+                border: "1px solid rgba(244,236,221,0.18)",
                 borderRadius: 18,
                 padding: "22px 24px",
                 boxShadow: "0 18px 48px rgba(0,0,0,0.28)",
@@ -1326,13 +1187,13 @@ const FactScene: React.FC<{
             >
               <div
                 style={{
-                  color: GOLD,
+                  color: BRASS,
                   fontSize: 18,
                   fontWeight: 800,
                   textTransform: "uppercase",
                 }}
               >
-                Quick takeaway
+                Psychology lens
               </div>
               <div
                 style={{
@@ -1343,7 +1204,7 @@ const FactScene: React.FC<{
                   marginTop: 14,
                 }}
               >
-                {truncate(highlight, 100)}
+                {truncate(highlight, 104)}
               </div>
             </div>
           ) : null}
@@ -1354,17 +1215,17 @@ const FactScene: React.FC<{
 };
 
 const OutroScene: React.FC<{
-  props: ClassicCarFactsProps;
+  props: WatchPsychologyProps;
   duration: number;
 }> = ({ props, duration }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const audioUrl = getAudioUrl(props.outro);
   const media = getMediaItems(props.outro);
-  const title = cleanText(props.outro?.title, "Which fact surprised you most?");
+  const title = cleanText(props.outro?.title, "The watch says something before you do");
   const body = cleanText(
     props.outro?.body,
-    "The best classic-car stories usually live in the details."
+    "The psychological power of watches lives in ritual, recognition, and the stories people attach to them."
   );
   const scale = spring({
     frame,
@@ -1374,12 +1235,8 @@ const OutroScene: React.FC<{
 
   return (
     <FadeWrap duration={duration}>
-      <BaseBackground accent={RED} />
-      <MediaLayer
-        media={media}
-        visualBeats={props.outro?.visualBeats}
-        duration={duration}
-      />
+      <BaseBackground accent={OXBLOOD} />
+      <MediaLayer media={media} visualBeats={props.outro?.visualBeats} duration={duration} />
       {audioUrl ? <Audio src={audioUrl} /> : null}
       <AbsoluteFill
         style={{
@@ -1392,7 +1249,7 @@ const OutroScene: React.FC<{
       >
         <div
           style={{
-            color: GOLD,
+            color: BRASS,
             fontSize: 24,
             fontWeight: 800,
             textTransform: "uppercase",
@@ -1404,56 +1261,53 @@ const OutroScene: React.FC<{
           style={{
             color: PAPER,
             fontFamily: "Georgia, Times New Roman, serif",
-            fontSize: 74,
+            fontSize: 72,
             lineHeight: 1.08,
             marginTop: 24,
             transform: `scale(${0.97 + scale * 0.03})`,
             maxWidth: 1180,
           }}
         >
-          {truncate(title, 86)}
+          {truncate(title, 88)}
         </div>
         <div
           style={{
             width: 420,
             height: 5,
-            backgroundColor: RED,
+            backgroundColor: OXBLOOD,
             marginTop: 30,
             marginBottom: 28,
           }}
         />
         <div
           style={{
-            color: "rgba(241,234,217,0.84)",
+            color: "rgba(244,236,221,0.84)",
             fontSize: 32,
             lineHeight: 1.36,
             maxWidth: 1020,
             fontWeight: 600,
           }}
         >
-          {truncate(body, 180)}
+          {truncate(body, 182)}
         </div>
       </AbsoluteFill>
     </FadeWrap>
   );
 };
 
-export const ClassicCarFacts: React.FC<ClassicCarFactsProps> = (props) => {
+export const WatchPsychology: React.FC<WatchPsychologyProps> = (props) => {
   const { fps, durationInFrames } = useVideoConfig();
-  const mergedProps: ClassicCarFactsProps = {
-    ...classicCarFactsDefaultProps,
+  const mergedProps: WatchPsychologyProps = {
+    ...watchPsychologyDefaultProps,
     ...props,
-    intro: {
-      ...classicCarFactsDefaultProps.intro,
-      ...props.intro,
-    },
-    outro: {
-      ...classicCarFactsDefaultProps.outro,
-      ...props.outro,
-    },
-    facts: props.facts && props.facts.length > 0 ? props.facts : classicCarFactsDefaultProps.facts,
+    intro: { ...watchPsychologyDefaultProps.intro, ...props.intro },
+    outro: { ...watchPsychologyDefaultProps.outro, ...props.outro },
+    facts:
+      props.facts && props.facts.length > 0
+        ? props.facts
+        : watchPsychologyDefaultProps.facts,
   };
-  const timeline = buildFactTimeline(mergedProps, fps);
+  const timeline = buildTimeline(mergedProps, fps);
   const musicUrl = cleanText(mergedProps.backgroundMusicUrl, "");
 
   return (
@@ -1473,7 +1327,7 @@ export const ClassicCarFacts: React.FC<ClassicCarFactsProps> = (props) => {
               [1, 0],
               { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
             );
-            return 0.1 * Math.min(fadeIn, fadeOut);
+            return 0.09 * Math.min(fadeIn, fadeOut);
           }}
         />
       ) : null}
@@ -1487,11 +1341,7 @@ export const ClassicCarFacts: React.FC<ClassicCarFactsProps> = (props) => {
               durationInFrames={section.duration}
               premountFor={fps}
             >
-              <IntroScene
-                props={mergedProps}
-                duration={section.duration}
-                totalFacts={timeline.facts.length}
-              />
+              <IntroScene props={mergedProps} duration={section.duration} totalFacts={timeline.facts.length} />
             </Sequence>
           );
         }
@@ -1516,7 +1366,7 @@ export const ClassicCarFacts: React.FC<ClassicCarFactsProps> = (props) => {
             durationInFrames={section.duration}
             premountFor={fps}
           >
-            <FactScene
+            <InsightScene
               fact={section.fact || {}}
               index={section.index || 0}
               total={timeline.facts.length}
