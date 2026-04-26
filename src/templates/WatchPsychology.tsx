@@ -633,6 +633,10 @@ const GraphicCard: React.FC<{
   const kind = moment.kind || "stat-badge";
   const headline = cleanText(moment.headline, "Psychology lens");
   const subhead = cleanText(moment.subhead, "");
+  const headlineLines = splitLines(headline, 22, 3);
+  const headlineSize =
+    headlineLines.length >= 3 ? 28 : headlineLines.length === 2 ? 32 : 36;
+  const subheadLines = subhead ? splitLines(subhead, 38, 3) : [];
   const bullets = (moment.bullets || [])
     .map((bullet) => cleanText(bullet))
     .filter(Boolean)
@@ -674,39 +678,44 @@ const GraphicCard: React.FC<{
         <div
           style={{
             color: BRASS,
-            fontSize: 18,
+            fontSize: 16,
             fontWeight: 800,
             textTransform: "uppercase",
+            letterSpacing: 0.4,
           }}
         >
           {kind === "bar-chart"
-            ? "Behavior pattern"
+            ? "Behavior curve"
             : kind === "timeline-card"
-              ? "Emotional sequence"
-              : "Psychology cue"}
+              ? "Emotional arc"
+              : "Signal snapshot"}
         </div>
         <div
           style={{
             color: PAPER,
             fontFamily: "Georgia, Times New Roman, serif",
-            fontSize: 34,
+            fontSize: headlineSize,
             lineHeight: 1.08,
             marginTop: 14,
           }}
         >
-          {truncate(headline, 44)}
+          {headlineLines.map((line, index) => (
+            <div key={`${line}-${index}`}>{line}</div>
+          ))}
         </div>
         {subhead ? (
           <div
             style={{
               color: "rgba(244,236,221,0.72)",
-              fontSize: 18,
-              lineHeight: 1.3,
+              fontSize: 17,
+              lineHeight: 1.28,
               marginTop: 10,
               fontWeight: 700,
             }}
           >
-            {truncate(subhead, 62)}
+            {subheadLines.map((line, index) => (
+              <div key={`${line}-${index}`}>{line}</div>
+            ))}
           </div>
         ) : null}
         <div
@@ -785,12 +794,14 @@ const GraphicCard: React.FC<{
                 <div
                   style={{
                     color: "rgba(244,236,221,0.88)",
-                    fontSize: 22,
+                    fontSize: 20,
                     lineHeight: 1.28,
                     fontWeight: 700,
                   }}
                 >
-                  {truncate(bullet, 74)}
+                  {splitLines(bullet, 30, 3).map((line, lineIndex) => (
+                    <div key={`${line}-${lineIndex}`}>{line}</div>
+                  ))}
                 </div>
               </div>
             ))}
@@ -801,18 +812,31 @@ const GraphicCard: React.FC<{
             <div
               style={{
                 color: PAPER,
-                fontSize: 27,
-                lineHeight: 1.26,
+                fontSize:
+                  splitLines(
+                    cleanText(
+                      moment.highlight,
+                      "The strongest signal is often emotional, not technical."
+                    ),
+                    34,
+                    4
+                  ).length > 3
+                    ? 22
+                    : 25,
+                lineHeight: 1.24,
                 fontWeight: 700,
               }}
             >
-              {truncate(
+              {splitLines(
                 cleanText(
                   moment.highlight,
                   "The strongest signal is often emotional, not technical."
                 ),
-                118
-              )}
+                34,
+                4
+              ).map((line, index) => (
+                <div key={`${line}-${index}`}>{line}</div>
+              ))}
             </div>
             <div
               style={{
@@ -930,6 +954,11 @@ const IntroScene: React.FC<{
     extrapolateRight: "clamp",
   });
   const media = getMediaItems(props.intro);
+  const titleLines = splitLines(title, 24, 3);
+  const subtitleLines = splitLines(subtitle, 48, 3);
+  const titleSize =
+    titleLines.length >= 3 ? 52 : titleLines.length === 2 ? 60 : 68;
+  const subtitleSize = subtitleLines.length >= 3 ? 24 : 28;
 
   return (
     <FadeWrap duration={duration}>
@@ -946,13 +975,14 @@ const IntroScene: React.FC<{
       >
         <div
           style={{
-            width: 980,
-            backgroundColor: "rgba(18,16,14,0.58)",
-            border: `2px solid ${BRASS}`,
+            width: 960,
+            backgroundColor: "rgba(14,12,10,0.64)",
+            border: `1px solid rgba(201,161,90,0.74)`,
             borderRadius: 18,
-            padding: "34px 38px 34px 38px",
-            boxShadow: "0 22px 56px rgba(0,0,0,0.42)",
+            padding: "34px 38px 30px 38px",
+            boxShadow: "0 22px 56px rgba(0,0,0,0.46)",
             transform: `translateY(${(1 - cardIn) * 34}px) scale(${0.97 + cardIn * 0.03})`,
+            backdropFilter: "blur(10px)",
           }}
         >
           <div
@@ -970,13 +1000,15 @@ const IntroScene: React.FC<{
             style={{
               color: PAPER,
               fontFamily: "Georgia, Times New Roman, serif",
-              fontSize: 76,
+              fontSize: titleSize,
               lineHeight: 1.04,
               marginTop: 18,
-              maxWidth: 830,
+              maxWidth: 840,
             }}
           >
-            {truncate(title, 74)}
+            {titleLines.map((line, index) => (
+              <div key={`${line}-${index}`}>{line}</div>
+            ))}
           </div>
           <div
             style={{
@@ -990,13 +1022,15 @@ const IntroScene: React.FC<{
           <div
             style={{
               color: "rgba(244,236,221,0.88)",
-              fontSize: 30,
-              lineHeight: 1.35,
+              fontSize: subtitleSize,
+              lineHeight: 1.34,
               fontWeight: 600,
-              maxWidth: 780,
+              maxWidth: 760,
             }}
           >
-            {truncate(subtitle, 126)}
+            {subtitleLines.map((line, index) => (
+              <div key={`${line}-${index}`}>{line}</div>
+            ))}
           </div>
           <div
             style={{
@@ -1005,16 +1039,19 @@ const IntroScene: React.FC<{
               justifyContent: "space-between",
               marginTop: 30,
               gap: 28,
+              flexWrap: "wrap",
             }}
           >
             <div
               style={{
                 color: "rgba(244,236,221,0.62)",
-                fontSize: 21,
+                fontSize: 19,
                 fontWeight: 700,
+                textTransform: "uppercase",
+                letterSpacing: 0.3,
               }}
             >
-              {totalFacts} insight chapters / editorial essay format
+              {totalFacts} insight chapters / slow-burn editorial pacing
             </div>
             <ProgressRail total={totalFacts} activeIndex={0} />
           </div>
@@ -1043,11 +1080,16 @@ const InsightScene: React.FC<{
   });
   const glow = 0.82 + Math.sin(frame * 0.05) * 0.05;
   const label = cleanText(fact.label, fact.factType ? `${fact.factType} insight` : "watch culture insight");
-  const titleLines = splitLines(cleanText(fact.title, "Watch psychology insight"), 28, 2);
-  const bodyLines = splitLines(cleanText(fact.body, ""), 52, 5);
+  const titleLines = splitLines(cleanText(fact.title, "Watch psychology insight"), 26, 3);
+  const bodyLines = splitLines(cleanText(fact.body, ""), 46, 4);
   const highlight = cleanText(fact.highlight, "");
   const number = String(fact.number || index + 1).padStart(2, "0");
-  const titleSize = titleLines.length > 1 ? 48 : 56;
+  const titleSize =
+    titleLines.length >= 3 ? 46 : titleLines.length === 2 ? 52 : 58;
+  const bodySize = bodyLines.length >= 4 ? 24 : 27;
+  const highlightLines = highlight ? splitLines(highlight, 24, 4) : [];
+  const highlightSize = highlightLines.length >= 4 ? 18 : highlightLines.length >= 3 ? 20 : 22;
+  const categoryLabel = truncate(cleanText(category, "Watch Psychology"), 24);
 
   return (
     <FadeWrap duration={duration}>
@@ -1094,22 +1136,25 @@ const InsightScene: React.FC<{
               <div
                 style={{
                   color: BRASS,
-                  fontSize: 20,
+                  fontSize: 17,
                   fontWeight: 800,
                   textTransform: "uppercase",
+                  letterSpacing: 0.4,
                 }}
               >
-                {truncate(label, 26)}
+                {truncate(label, 28)}
               </div>
               <div
                 style={{
                   color: "rgba(244,236,221,0.66)",
-                  fontSize: 20,
+                  fontSize: 17,
                   fontWeight: 700,
                   marginTop: 6,
+                  textTransform: "uppercase",
+                  letterSpacing: 0.3,
                 }}
               >
-                {number} / {String(total).padStart(2, "0")} / {cleanText(category, "Watch Psychology")}
+                {number} / {String(total).padStart(2, "0")} / {categoryLabel}
               </div>
             </div>
           </div>
@@ -1128,12 +1173,13 @@ const InsightScene: React.FC<{
           <div
             style={{
               width: 980,
-              backgroundColor: "rgba(18,16,14,0.58)",
-              border: `2px solid ${BRASS}`,
+              backgroundColor: "rgba(14,12,10,0.64)",
+              border: `1px solid rgba(201,161,90,0.72)`,
               borderRadius: 20,
-              padding: "34px 38px 30px 38px",
-              boxShadow: "0 24px 58px rgba(0,0,0,0.44)",
+              padding: "30px 34px 28px 34px",
+              boxShadow: "0 24px 58px rgba(0,0,0,0.46)",
               transform: `translateY(${(1 - cardEnter) * 24}px) scale(${0.975 + cardEnter * 0.025})`,
+              backdropFilter: "blur(10px)",
             }}
           >
             <div
@@ -1161,10 +1207,10 @@ const InsightScene: React.FC<{
             <div
               style={{
                 color: "rgba(244,236,221,0.9)",
-                fontSize: 28,
+                fontSize: bodySize,
                 lineHeight: 1.34,
                 fontWeight: 600,
-                maxWidth: 820,
+                maxWidth: 840,
               }}
             >
               {bodyLines.map((line, lineIndex) => (
@@ -1176,21 +1222,23 @@ const InsightScene: React.FC<{
           {highlight ? (
             <div
               style={{
-                width: 360,
-                backgroundColor: "rgba(18,16,14,0.46)",
+                width: 330,
+                backgroundColor: "rgba(14,12,10,0.58)",
                 border: "1px solid rgba(244,236,221,0.18)",
                 borderRadius: 18,
                 padding: "22px 24px",
                 boxShadow: "0 18px 48px rgba(0,0,0,0.28)",
                 transform: `translateY(${(1 - cardEnter) * 18}px)`,
+                backdropFilter: "blur(8px)",
               }}
             >
               <div
                 style={{
                   color: BRASS,
-                  fontSize: 18,
+                  fontSize: 15,
                   fontWeight: 800,
                   textTransform: "uppercase",
+                  letterSpacing: 0.4,
                 }}
               >
                 Psychology lens
@@ -1198,13 +1246,15 @@ const InsightScene: React.FC<{
               <div
                 style={{
                   color: PAPER,
-                  fontSize: 26,
-                  lineHeight: 1.25,
+                  fontSize: highlightSize,
+                  lineHeight: 1.26,
                   fontWeight: 700,
                   marginTop: 14,
                 }}
               >
-                {truncate(highlight, 104)}
+                {highlightLines.map((line, lineIndex) => (
+                  <div key={`${line}-${lineIndex}`}>{line}</div>
+                ))}
               </div>
             </div>
           ) : null}
@@ -1227,6 +1277,11 @@ const OutroScene: React.FC<{
     props.outro?.body,
     "The psychological power of watches lives in ritual, recognition, and the stories people attach to them."
   );
+  const titleLines = splitLines(title, 28, 3);
+  const bodyLines = splitLines(body, 48, 4);
+  const titleSize =
+    titleLines.length >= 3 ? 48 : titleLines.length === 2 ? 56 : 64;
+  const bodySize = bodyLines.length >= 4 ? 24 : 28;
   const scale = spring({
     frame,
     fps,
@@ -1249,46 +1304,70 @@ const OutroScene: React.FC<{
       >
         <div
           style={{
-            color: BRASS,
-            fontSize: 24,
-            fontWeight: 800,
-            textTransform: "uppercase",
-          }}
-        >
-          Closing thought
-        </div>
-        <div
-          style={{
-            color: PAPER,
-            fontFamily: "Georgia, Times New Roman, serif",
-            fontSize: 72,
-            lineHeight: 1.08,
-            marginTop: 24,
+            width: 1040,
+            maxWidth: "100%",
+            backgroundColor: "rgba(14,12,10,0.62)",
+            border: `1px solid rgba(201,161,90,0.7)`,
+            borderRadius: 20,
+            padding: "34px 42px 30px 42px",
+            boxShadow: "0 22px 56px rgba(0,0,0,0.42)",
+            backdropFilter: "blur(10px)",
             transform: `scale(${0.97 + scale * 0.03})`,
-            maxWidth: 1180,
           }}
         >
-          {truncate(title, 88)}
-        </div>
-        <div
-          style={{
-            width: 420,
-            height: 5,
-            backgroundColor: OXBLOOD,
-            marginTop: 30,
-            marginBottom: 28,
-          }}
-        />
-        <div
-          style={{
-            color: "rgba(244,236,221,0.84)",
-            fontSize: 32,
-            lineHeight: 1.36,
-            maxWidth: 1020,
-            fontWeight: 600,
-          }}
-        >
-          {truncate(body, 182)}
+          <div
+            style={{
+              color: BRASS,
+              fontSize: 18,
+              fontWeight: 800,
+              textTransform: "uppercase",
+              letterSpacing: 0.4,
+            }}
+          >
+            Closing thought
+          </div>
+          <div
+            style={{
+              color: PAPER,
+              fontFamily: "Georgia, Times New Roman, serif",
+              fontSize: titleSize,
+              lineHeight: 1.08,
+              marginTop: 18,
+              maxWidth: 900,
+              marginLeft: "auto",
+              marginRight: "auto",
+            }}
+          >
+            {titleLines.map((line, index) => (
+              <div key={`${line}-${index}`}>{line}</div>
+            ))}
+          </div>
+          <div
+            style={{
+              width: 320,
+              height: 5,
+              backgroundColor: OXBLOOD,
+              marginTop: 24,
+              marginBottom: 24,
+              marginLeft: "auto",
+              marginRight: "auto",
+            }}
+          />
+          <div
+            style={{
+              color: "rgba(244,236,221,0.84)",
+              fontSize: bodySize,
+              lineHeight: 1.34,
+              maxWidth: 860,
+              fontWeight: 600,
+              marginLeft: "auto",
+              marginRight: "auto",
+            }}
+          >
+            {bodyLines.map((line, index) => (
+              <div key={`${line}-${index}`}>{line}</div>
+            ))}
+          </div>
         </div>
       </AbsoluteFill>
     </FadeWrap>
