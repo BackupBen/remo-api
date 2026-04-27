@@ -1,5 +1,6 @@
 import React from "react";
 import { Composition } from "remotion";
+import { getAudioData } from "@remotion/media-utils";
 import { SocialClip } from "./templates/SocialClip";
 import { ImageSlideshow } from "./templates/ImageSlideshow";
 import { TextAnimation } from "./templates/TextAnimation";
@@ -55,6 +56,100 @@ const measureAudioSeconds = async (
   } catch (error) {
     console.error("[OldtimerShowcase] getAudioDurationInSeconds failed for", url, error);
     return fallback;
+  }
+};
+
+const watchSpeechDurationCache = new Map<string, number | undefined>();
+
+const measureWatchSpeechSeconds = async (
+  url: string,
+  fallback?: number
+): Promise<number | undefined> => {
+  if (!url) {
+    return fallback;
+  }
+
+  if (watchSpeechDurationCache.has(url)) {
+    return watchSpeechDurationCache.get(url);
+  }
+
+  try {
+    const audioData = await getAudioData(url, { sampleRate: 16000 });
+    const channels = audioData.channelWaveforms || [];
+    const sampleRate = audioData.sampleRate || 16000;
+    const totalDuration = Number(audioData.durationInSeconds || 0);
+
+    if (channels.length === 0 || sampleRate <= 0 || totalDuration <= 0) {
+      const measured = await measureAudioSeconds(url, fallback);
+      watchSpeechDurationCache.set(url, measured);
+      return measured;
+    }
+
+    let peak = 0;
+    for (const channel of channels) {
+      for (let i = 0; i < channel.length; i++) {
+        const amplitude = Math.abs(channel[i]);
+        if (amplitude > peak) {
+          peak = amplitude;
+        }
+      }
+    }
+
+    const totalSamples = channels[0]?.length || 0;
+    const windowSize = Math.max(512, Math.round(sampleRate * 0.08));
+    const peakThreshold = Math.max(0.0045, peak * 0.045);
+    const rmsThreshold = Math.max(0.0018, peakThreshold * 0.38);
+    let lastActiveSample = totalSamples - 1;
+    let foundActiveWindow = false;
+
+    for (let end = totalSamples; end > 0; end -= windowSize) {
+      const start = Math.max(0, end - windowSize);
+      let windowPeak = 0;
+      let windowEnergy = 0;
+      let sampleCount = 0;
+
+      for (const channel of channels) {
+        for (let i = start; i < end; i++) {
+          const amplitude = Math.abs(channel[i] || 0);
+          if (amplitude > windowPeak) {
+            windowPeak = amplitude;
+          }
+          windowEnergy += amplitude * amplitude;
+          sampleCount += 1;
+        }
+      }
+
+      const rms = sampleCount > 0 ? Math.sqrt(windowEnergy / sampleCount) : 0;
+      const isActive = windowPeak >= peakThreshold || rms >= rmsThreshold;
+
+      if (isActive) {
+        lastActiveSample = end;
+        foundActiveWindow = true;
+        break;
+      }
+    }
+
+    if (!foundActiveWindow) {
+      const measured = await measureAudioSeconds(url, fallback);
+      watchSpeechDurationCache.set(url, measured);
+      return measured;
+    }
+
+    const speechEndSeconds = Math.min(
+      totalDuration,
+      Math.max(0.8, lastActiveSample / sampleRate + 0.18)
+    );
+    const trailingSilence = totalDuration - speechEndSeconds;
+    const resolved =
+      trailingSilence >= 0.35 ? speechEndSeconds : totalDuration;
+
+    watchSpeechDurationCache.set(url, resolved);
+    return resolved;
+  } catch (error) {
+    console.error("[WatchPsychology] speech measurement failed for", url, error);
+    const measured = await measureAudioSeconds(url, fallback);
+    watchSpeechDurationCache.set(url, measured);
+    return measured;
   }
 };
 
@@ -193,11 +288,11 @@ const withMeasuredWatchPsychologyAudio = async (
     url: string,
     fallback?: number
   ) => {
-    if (fallback && fallback > 0) {
+    if (!url) {
       return fallback;
     }
 
-    return measureAudioSeconds(url, fallback);
+    return measureWatchSpeechSeconds(url, fallback);
   };
 
   const [introSeconds, outroSeconds, factSeconds] = await Promise.all([
