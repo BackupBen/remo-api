@@ -189,14 +189,25 @@ const withMeasuredWatchPsychologyAudio = async (
   const outroUrl = getSectionAudioUrl(props.outro);
   const facts = (props.facts || []) as WatchPsychologyInsight[];
 
+  const resolveWatchSectionSeconds = async (
+    url: string,
+    fallback?: number
+  ) => {
+    if (fallback && fallback > 0) {
+      return fallback;
+    }
+
+    return measureAudioSeconds(url, fallback);
+  };
+
   const [introSeconds, outroSeconds, factSeconds] = await Promise.all([
-    measureAudioSeconds(
+    resolveWatchSectionSeconds(
       introUrl,
       props.intro?.audioDurationSeconds ||
         props.intro?.voiceoverDurationSeconds ||
         props.intro?.durationSeconds
     ),
-    measureAudioSeconds(
+    resolveWatchSectionSeconds(
       outroUrl,
       props.outro?.audioDurationSeconds ||
         props.outro?.voiceoverDurationSeconds ||
@@ -204,7 +215,7 @@ const withMeasuredWatchPsychologyAudio = async (
     ),
     Promise.all(
       facts.map((fact) =>
-        measureAudioSeconds(
+        resolveWatchSectionSeconds(
           getSectionAudioUrl(fact),
           fact.audioDurationSeconds ||
             fact.voiceoverDurationSeconds ||
