@@ -34,6 +34,8 @@ export interface BritishQuizProps {
   questionDurations?: number[];
   /** Optional: URL zur Hintergrundmusik (MinIO) — wird als Loop abgespielt */
   backgroundMusicUrl?: string;
+  /** Optional: Lautstärke der Hintergrundmusik von 0 bis 1 */
+  backgroundMusicVolume?: number;
   /** Schwierigkeitsgrad: easy = volles Bild, medium = halbes Bild, hard = kleiner Ausschnitt */
   difficulty?: Difficulty;
 }
@@ -430,8 +432,17 @@ const QuizIntro: React.FC<{ totalQuestions: number }> = ({ totalQuestions }) => 
 
 // ─── Hauptkomposition ─────────────────────────────────────────────────────────
 
-export const BritishOldtimerQuiz: React.FC<BritishQuizProps> = ({ questions, questionDurations, backgroundMusicUrl, difficulty = "easy" }) => {
+export const BritishOldtimerQuiz: React.FC<BritishQuizProps> = ({
+  questions,
+  questionDurations,
+  backgroundMusicUrl,
+  backgroundMusicVolume = 0.06,
+  difficulty = "easy",
+}) => {
   const { durationInFrames } = useVideoConfig();
+  const clampedBackgroundMusicVolume = Number.isFinite(backgroundMusicVolume)
+    ? Math.max(0, Math.min(1, backgroundMusicVolume))
+    : 0.06;
 
   // Berechne kumulative Start-Frames pro Frage
   const durations = questions.map((_, i) => questionDurations?.[i] ?? QUESTION_FRAMES);
@@ -442,7 +453,7 @@ export const BritishOldtimerQuiz: React.FC<BritishQuizProps> = ({ questions, que
 
   return (
     <AbsoluteFill style={{ background: "linear-gradient(160deg, #0a1a6e 0%, #1a237e 40%, #0d47a1 100%)" }}>
-      {/* Hintergrundmusik (Loop, Fade-in 2s / Fade-out 2s, Volumen 12%) */}
+      {/* Hintergrundmusik (Loop, Fade-in 2s / Fade-out 2s, konfigurierbare Lautstärke) */}
       {backgroundMusicUrl && (
         <Audio
           src={backgroundMusicUrl}
@@ -450,7 +461,7 @@ export const BritishOldtimerQuiz: React.FC<BritishQuizProps> = ({ questions, que
           volume={(frame) => {
             const fadeIn  = interpolate(frame, [0, 60], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
             const fadeOut = interpolate(frame, [durationInFrames - 60, durationInFrames], [1, 0], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
-            return 0.12 * Math.min(fadeIn, fadeOut);
+            return clampedBackgroundMusicVolume * Math.min(fadeIn, fadeOut);
           }}
         />
       )}

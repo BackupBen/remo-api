@@ -447,6 +447,7 @@ export const Root: React.FC = () => {
             },
           ],
           questionDurations: undefined,
+          backgroundMusicVolume: 0.06,
           difficulty: "easy" as "easy" | "medium" | "hard",
         }}
       />
